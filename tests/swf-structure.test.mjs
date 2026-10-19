@@ -5,7 +5,7 @@ import { inspectSwf } from '../scripts/inspect-swf-structure.mjs';
 
 /** Self-authored synthetic Flash header; no copyright game content. */
 function syntheticSwf() {
-  const nbits=11;
+  const nbits=15;
   const values=[0,640*20,0,480*20];
   const bits=[...Array.from({length:5},(_,i)=>(nbits>>(4-i))&1)];
   for(const value of values)for(let i=nbits-1;i>=0;i--)bits.push((value>>i)&1);
