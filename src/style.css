@@ -11,3 +11,5 @@
 .debug-panel summary{font:14px system-ui;cursor:pointer;color:#d0d0d0;min-height:32px}
 .debug-panel pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:210px;overflow:auto;background:#121212;padding:10px;border-radius:4px}
 .debug-panel button{background:#242424;border:1px solid #555;color:#ddd;border-radius:5px;padding:8px 12px;margin-right:8px;min-height:44px}
+
+.flash-overlay{position:absolute;inset:0;z-index:10;pointer-events:none;opacity:0;background-color:transparent}
