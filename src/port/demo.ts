@@ -6,7 +6,9 @@ export const demoSpec: PortSpec = {
     id: 'test-room', width: 640, height: 480, background: '#302e2b',
     layers: [
       { id: 'room', src: '/demo-room.svg', visible: true },
-      { id: 'mark', src: '/demo-mark.svg', visible: false }
+      { id: 'mark', src: '/demo-mark.svg', visible: false },
+      { id: 'flicker', src: '/demo-flicker-1.svg', visible: true,
+        animation: { frames: ['/demo-flicker-1.svg','/demo-flicker-2.svg'], fps: 2, loop: true } }
     ],
     hotspots: [
       { id: 'frame', bounds: { x: 245, y: 80, width: 155, height: 176 } },
