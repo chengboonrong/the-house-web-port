@@ -4,7 +4,10 @@ export const demoSpec: PortSpec = {
   initialScene: 'test-room',
   scenes: [{
     id: 'test-room', width: 640, height: 480, background: '#302e2b',
-    layers: [{ id: 'mark', src: '', visible: false }],
+    layers: [
+      { id: 'room', src: '/demo-room.svg', visible: true },
+      { id: 'mark', src: '/demo-mark.svg', visible: false }
+    ],
     hotspots: [{ id: 'frame', bounds: { x: 245, y: 80, width: 155, height: 176 } }],
     rules: [
       { id: 'first', on: 'frame', when: { variable: 'frameClicks', equals: 0 }, increment: 'frameClicks', actions: [
