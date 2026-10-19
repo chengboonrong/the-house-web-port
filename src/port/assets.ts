@@ -29,7 +29,7 @@ export class AssetLoader<T> {
 }
 
 export function sceneAssetUrls(scene: SceneSpec): string[] {
-  return [...new Set(scene.layers.map(layer => layer.src).filter(Boolean))];
+  return [...new Set(scene.layers.flatMap(layer => [layer.src, ...(layer.animation?.frames ?? [])]).filter(Boolean))];
 }
 
 export function portAssetUrls(spec: PortSpec): string[] {
