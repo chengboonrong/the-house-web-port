@@ -6,6 +6,8 @@ import { PortRunner } from './port/runner';
 import { PortAudio } from './port/audio';
 import { AssetLoader, decodeImage, portAssetUrls } from './port/assets';
 import { SceneRenderer } from './port/renderer';
+import { PlaybackTrace } from './port/trace';
+import { SAVE_KEY, createCheckpoint, parseCheckpoint } from './port/save';
 
 const root = document.querySelector<HTMLDivElement>('#app')!;
 root.innerHTML = `
@@ -17,8 +19,9 @@ root.innerHTML = `
   <div class="status" id="status" role="status"></div>
   <div class="controls">
     <button id="start">START DEMO</button><button id="inspect">INSPECT FRAME</button><button id="navigate">GO TO HALL</button>
-    <button id="reset">RESET</button><button id="mute" aria-pressed="false">MUTE</button>
+    <button id="reset">RESET</button><button id="save">SAVE</button><button id="load">RESUME</button><button id="mute" aria-pressed="false">MUTE</button>
   </div>
+  <details class="debug-panel"><summary>Playback Debugger</summary><pre id="debug-status"></pre><button id="export-trace">EXPORT TRACE</button><button id="clear-trace">CLEAR TRACE</button><pre id="debug-trace"></pre></details>
   <p class="legal">Original fictional test art and events. This is not The House's original SWF or a gameplay-faithful port.</p>
 </div>`;
 
@@ -29,6 +32,14 @@ const muteButton = document.querySelector<HTMLButtonElement>('#mute')!;
 const renderer = new SceneRenderer(stage);
 const assets = new AssetLoader(decodeImage);
 const audio = new PortAudio();
+const trace = new PlaybackTrace();
+const debugStatus = document.querySelector<HTMLElement>('#debug-status')!;
+const debugTrace = document.querySelector<HTMLElement>('#debug-trace')!;
+function refreshDebugger() {
+  debugStatus.textContent = JSON.stringify({ scene: runner.state.scene, counters: runner.state.counters,
+    opacity: runner.state.layerOpacity, busy: runner.busy, paused: runner.state.paused }, null, 2);
+  debugTrace.textContent = trace.export();
+}
 let ready = false;
 let currentScene = '';
 const runner = new PortRunner(demoSpec, {
@@ -40,8 +51,10 @@ const runner = new PortRunner(demoSpec, {
       requestAnimationFrame(syncStageSize);
     }
     status.textContent = state.paused ? 'Paused in background.' : state.message || (ready ? 'Tap the picture frame.' : 'Loading scene assets...');
+    refreshDebugger();
   },
-  onSound: id => { audio.play(id); }
+  onSound: id => { audio.play(id); },
+  onEvent: entry => { trace.append(entry); }
 });
 runner.start(performance.now());
 
@@ -79,11 +92,33 @@ document.querySelector('#inspect')!.addEventListener('click', () => {
 document.querySelector('#navigate')!.addEventListener('click', () => {
   if (ready) runner.click(runner.state.scene === 'test-room' ? 'door' : 'return');
 });
+document.querySelector('#save')!.addEventListener('click', () => {
+  const checkpoint = createCheckpoint(runner.state, runner.busy);
+  if (!checkpoint) { status.textContent = 'Finish the current animation before saving.'; return; }
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(checkpoint)); status.textContent = 'Checkpoint saved locally.'; }
+  catch { status.textContent = 'Browser storage unavailable.'; }
+});
+document.querySelector('#load')!.addEventListener('click', () => {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    const checkpoint = raw ? parseCheckpoint(raw, demoSpec) : null;
+    if (!checkpoint) { status.textContent = 'No valid checkpoint found.'; return; }
+    runner.restore(checkpoint, performance.now());
+    status.textContent = 'Checkpoint resumed.';
+  } catch { status.textContent = 'Browser storage unavailable.'; }
+});
+document.querySelector('#export-trace')!.addEventListener('click', () => {
+  const data = new Blob([trace.export()], { type: 'application/json' });
+  const url = URL.createObjectURL(data);
+  const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'port-trace.json';
+  anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 0);
+});
+document.querySelector('#clear-trace')!.addEventListener('click', () => { trace.clear(); refreshDebugger(); });
 document.querySelector('#start')!.addEventListener('click', () => {
   void audio.unlock().catch(() => { /* sound is optional in the placeholder demo */ });
-  if (ready) runner.start(performance.now());
+  if (ready) { trace.clear(); runner.start(performance.now()); }
 });
-document.querySelector('#reset')!.addEventListener('click', () => { if (ready) runner.reset(performance.now()); });
+document.querySelector('#reset')!.addEventListener('click', () => { if (ready) { trace.clear(); runner.reset(performance.now()); } });
 muteButton.addEventListener('click', () => {
   audio.setMuted(!audio.isMuted);
   muteButton.textContent = audio.isMuted ? 'UNMUTE' : 'MUTE';
