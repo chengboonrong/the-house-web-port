@@ -77,20 +77,27 @@ async function drain() {
     }
   }
 }
-function inspect() {
+function inspectAt(clientX: number, clientY: number) {
   if (document.hidden || state.paused) return;
   const scene = sceneById(demoSpec, state.scene);
-  // The placeholder DOM element covers the declarative hotspot; it is not SWF-derived.
-  const id = hitTest(scene, 320, 160);
+  const bounds = sceneElement.getBoundingClientRect();
+  const fitted = fitStage(scene.width, scene.height, { left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height });
+  const point = pointToStage(clientX, clientY, scene.width, scene.height, fitted);
+  if (!point) return;
+  const id = hitTest(scene, point.x, point.y);
   if (!id) return;
   const next = trigger(demoSpec, state, id);
   if (next === state) return;
   state = next;
   void drain();
 }
-frame.addEventListener('click', inspect);
+sceneElement.addEventListener('click', event => inspectAt(event.clientX, event.clientY));
 frame.addEventListener('keydown', event => {
-  if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); inspect(); }
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    const bounds = frame.getBoundingClientRect();
+    inspectAt(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
+  }
 });
 document.querySelector('#start')!.addEventListener('click', () => {
   generation++; resumed?.(); resumed = null;
@@ -107,5 +114,3 @@ document.addEventListener('visibilitychange', () => {
 });
 render();
 
-// Export geometry utility into the entrypoint bundle, keeping its type-checked Safari stage contract.
-void fitStage; void pointToStage;
