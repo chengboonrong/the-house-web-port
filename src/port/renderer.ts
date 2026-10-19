@@ -1,29 +1,28 @@
+import { FramePlayer } from './frames';
 import type { PortState, SceneSpec } from './types';
 
-/**
- * Data-driven, DOM-based scene renderer.
- * Uses a scalable 100% stage (no distortion) and native stage-pixel positions.
- * No original The House graphics or Flash runtime are used.
- */
+type AnimatedLayer = { image: HTMLImageElement; player: FramePlayer; lastUrl: string };
+/** DOM renderer with independently timed image-sequence layers. */
 export class SceneRenderer {
   private sceneId: string | null = null;
   private readonly layers = new Map<string, HTMLImageElement>();
-
+  private readonly animated = new Map<string, AnimatedLayer>();
+  private active = true;
+  private lastNow = 0;
   constructor(private readonly target: HTMLElement) {}
 
-  mount(scene: SceneSpec): void {
+  mount(scene: SceneSpec, now = this.lastNow): void {
     this.sceneId = scene.id;
     this.layers.clear();
+    this.animated.clear();
     this.target.replaceChildren();
     this.target.style.backgroundColor = scene.background;
-    this.target.style.aspectRatio = String(scene.width) + ' / ' + String(scene.height);
+    this.target.style.aspectRatio = scene.width + ' / ' + scene.height;
     this.target.setAttribute('aria-label', 'Scene ' + scene.id);
-
     for (const layer of scene.layers) {
-      if (!layer.src) continue;
+      if (!layer.src && !layer.animation) continue;
       const image = document.createElement('img');
       image.className = 'port-layer';
-      image.src = layer.src;
       image.alt = '';
       image.draggable = false;
       image.style.position = 'absolute';
@@ -34,6 +33,14 @@ export class SceneRenderer {
       image.style.objectFit = 'fill';
       image.style.display = layer.visible ? 'block' : 'none';
       image.dataset.layerId = layer.id;
+      if (layer.animation) {
+        const player = new FramePlayer(layer.animation);
+        player.start(now);
+        if (!this.active) player.pause(now);
+        const src = player.current(now);
+        image.src = src;
+        this.animated.set(layer.id, { image, player, lastUrl: src });
+      } else image.src = layer.src;
       this.target.appendChild(image);
       this.layers.set(layer.id, image);
     }
@@ -47,9 +54,32 @@ export class SceneRenderer {
     }
   }
 
+  setVisibility(visible: boolean, now: number): void {
+    this.lastNow = now;
+    if (this.active === visible) return;
+    this.active = visible;
+    for (const { player } of this.animated.values()) {
+      if (visible) player.resume(now);
+      else player.pause(now);
+    }
+  }
+
+  tick(now: number): void {
+    this.lastNow = now;
+    if (!this.active) return;
+    for (const layer of this.animated.values()) {
+      const url = layer.player.current(now);
+      if (url !== layer.lastUrl) {
+        layer.image.src = url;
+        layer.lastUrl = url;
+      }
+    }
+  }
+
   destroy(): void {
     this.target.replaceChildren();
     this.layers.clear();
+    this.animated.clear();
     this.sceneId = null;
   }
 }
