@@ -37,7 +37,7 @@ export class SceneRenderer {
       if (layer.animation) {
         const player = new FramePlayer(layer.animation);
         player.start(now);
-        if (!this.active) player.pause(now);
+        if (!this.active || this.reducedMotion) player.pause(now);
         const src = this.reducedMotion ? player.sequence.frames[0] : player.current(now);
         image.src = src;
         this.animated.set(layer.id, { image, player, lastUrl: src });
@@ -60,17 +60,21 @@ export class SceneRenderer {
     if (this.active === visible) return;
     this.active = visible;
     for (const { player } of this.animated.values()) {
-      if (visible) player.resume(now);
+      if (visible && !this.reducedMotion) player.resume(now);
       else player.pause(now);
     }
   }
 
   setReducedMotion(value: boolean): void {
+    if (this.reducedMotion === value) return;
     this.reducedMotion = value;
-    if (value) for (const layer of this.animated.values()) {
-      const first = layer.player.sequence.frames[0];
-      layer.image.src = first;
-      layer.lastUrl = first;
+    for (const layer of this.animated.values()) {
+      if (value) {
+        layer.player.pause(this.lastNow);
+        const first = layer.player.sequence.frames[0];
+        layer.image.src = first;
+        layer.lastUrl = first;
+      } else if (this.active) layer.player.resume(this.lastNow);
     }
   }
 
