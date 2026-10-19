@@ -126,6 +126,7 @@ muteButton.addEventListener('click', () => {
 });
 document.addEventListener('visibilitychange', () => {
   runner.setVisibility(!document.hidden, performance.now());
+  renderer.setVisibility(!document.hidden, performance.now());
   if (document.hidden) void audio.suspend();
   else void audio.resume().catch(() => {});
 });
@@ -136,16 +137,19 @@ syncStageSize();
 let animationFrame = 0;
 function update(now: number) {
   runner.tick(now);
+  renderer.tick(now);
   animationFrame = requestAnimationFrame(update);
 }
 animationFrame = requestAnimationFrame(update);
 window.addEventListener('pagehide', () => {
   cancelAnimationFrame(animationFrame);
   runner.setVisibility(false, performance.now());
+  renderer.setVisibility(false, performance.now());
   void audio.suspend();
 });
 window.addEventListener('pageshow', () => {
   runner.setVisibility(true, performance.now());
+  renderer.setVisibility(true, performance.now());
   cancelAnimationFrame(animationFrame);
   animationFrame = requestAnimationFrame(update);
 });
