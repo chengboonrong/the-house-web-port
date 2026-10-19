@@ -6,6 +6,11 @@ export function validateSpec(spec: PortSpec): string[] {
     if (ids.has(scene.id)) errors.push('Duplicate scene ' + scene.id);
     ids.add(scene.id);
     if (!(scene.width > 0 && scene.height > 0)) errors.push('Invalid dimensions: ' + scene.id);
+    for (const layer of scene.layers) {
+      if (layer.animation && (!layer.animation.frames.length || layer.animation.frames.some(frame => !frame) ||
+        !Number.isFinite(layer.animation.fps) || layer.animation.fps <= 0 || layer.animation.fps > 120))
+        errors.push('Invalid animation: ' + layer.id);
+    }
     const hotspots = new Set(scene.hotspots.map(h => h.id));
     for (const hot of scene.hotspots) {
       const b = hot.bounds;
