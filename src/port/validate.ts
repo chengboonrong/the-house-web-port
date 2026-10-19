@@ -15,7 +15,8 @@ export function validateSpec(spec: PortSpec): string[] {
       if (!hotspots.has(rule.on)) errors.push('Rule references missing hotspot: ' + rule.on);
       for (const action of rule.actions) {
         if (action.kind === 'wait' && (!Number.isFinite(action.ms) || action.ms < 0)) errors.push('Invalid wait: ' + rule.id);
-        if (action.kind === 'show' && !scene.layers.some(l => l.id === action.layer)) errors.push('Missing layer: ' + action.layer);
+        if ((action.kind === 'show' || action.kind === 'opacity') && !scene.layers.some(l => l.id === action.layer)) errors.push('Missing layer: ' + action.layer);
+        if (action.kind === 'opacity' && (!Number.isFinite(action.to) || action.to < 0 || action.to > 1 || !Number.isFinite(action.ms) || action.ms < 0)) errors.push('Invalid opacity: ' + rule.id);
       }
     }
   }
