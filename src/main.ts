@@ -4,7 +4,7 @@ import { demoSpec } from './port/demo';
 import { fitStage, pointToStage } from './port/coords';
 import { PortRunner } from './port/runner';
 import { PortAudio } from './port/audio';
-import { AssetLoader, decodeImage, sceneAssetUrls } from './port/assets';
+import { AssetLoader, decodeImage, portAssetUrls } from './port/assets';
 import { SceneRenderer } from './port/renderer';
 
 const root = document.querySelector<HTMLDivElement>('#app')!;
@@ -16,7 +16,7 @@ root.innerHTML = `
   </section>
   <div class="status" id="status" role="status"></div>
   <div class="controls">
-    <button id="start">START DEMO</button><button id="inspect">INSPECT FRAME</button>
+    <button id="start">START DEMO</button><button id="inspect">INSPECT FRAME</button><button id="navigate">GO TO HALL</button>
     <button id="reset">RESET</button><button id="mute" aria-pressed="false">MUTE</button>
   </div>
   <p class="legal">Original fictional test art and events. This is not The House's original SWF or a gameplay-faithful port.</p>
@@ -74,7 +74,10 @@ stage.addEventListener('keydown', e => {
   }
 });
 document.querySelector('#inspect')!.addEventListener('click', () => {
-  if (ready) runner.click('frame');
+  if (ready && runner.state.scene === 'test-room') runner.click('frame');
+});
+document.querySelector('#navigate')!.addEventListener('click', () => {
+  if (ready) runner.click(runner.state.scene === 'test-room' ? 'door' : 'return');
 });
 document.querySelector('#start')!.addEventListener('click', () => {
   void audio.unlock().catch(() => { /* sound is optional in the placeholder demo */ });
@@ -112,7 +115,7 @@ window.addEventListener('pageshow', () => {
   animationFrame = requestAnimationFrame(update);
 });
 
-void assets.preload(sceneAssetUrls(sceneById(demoSpec, runner.state.scene))).then(() => {
+void assets.preload(portAssetUrls(demoSpec)).then(() => {
   ready = true;
   runner.start(performance.now());
 }).catch(error => {
