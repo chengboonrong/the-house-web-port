@@ -1,4 +1,5 @@
 import type { PortSpec } from './types';
+import { scarePreset } from './scare-presets';
 /** FICTIONAL TEST FIXTURE, NOT ORIGINAL GAME EVIDENCE. */
 export const demoSpec: PortSpec = {
   initialScene: 'test-room',
@@ -23,9 +24,7 @@ export const demoSpec: PortSpec = {
       ] },
       { id: 'third', on: 'frame', when: { variable: 'frameClicks', equals: 2 }, increment: 'frameClicks', actions: [
         { kind: 'text', message: 'End of the fictional test sequence.' },
-        { kind: 'flash', color: '#ffffff', opacity: 0.65, ms: 350 },
-        { kind: 'shake', strength: 7, ms: 600 },
-        { kind: 'opacity', layer: 'room', to: 0.25, ms: 1100 }
+        ...scarePreset('sudden-flash')
       ] },
       { id: 'enter-hall', on: 'door', actions: [
         {kind:'text',message:'You step into a different test room.'},
