@@ -66,6 +66,26 @@ document.querySelector('#staged').addEventListener('click', async () => {
   } catch (error) { note('Staged load unavailable: '+String(error)); }
 });
 document.querySelector('#reset').addEventListener('click', () => { clear(); note('Unloaded.'); });
+document.querySelector('#diagnostics').addEventListener('click', () => {
+  const items = performance.getEntriesByType('resource')
+    .filter(entry => {
+      try { return new URL(entry.name).origin === location.origin && new URL(entry.name).pathname.startsWith('/original/'); }
+      catch { return false; }
+    })
+    .slice(-200).map(entry => ({
+      path: new URL(entry.name).pathname,
+      startTimeMs: Math.round(entry.startTime),
+      durationMs: Math.round(entry.duration),
+      transferSize: entry.transferSize ?? null,
+      decodedBodySize: entry.decodedBodySize ?? null
+    }));
+  const payload = { format: 'swf-resource-observations-v1', note: 'Performance entries do not establish request success or complete game dependencies.', resources: items };
+  const blob = new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'swf-resource-observations.json'; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
 const script = document.createElement('script');
 script.src = '/ruffle/ruffle.js';
 script.onload = () => note('Ruffle ready. Select local SWF or staged manifest.');
