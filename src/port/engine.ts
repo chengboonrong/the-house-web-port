@@ -47,6 +47,8 @@ export function consume(spec: PortSpec, state: PortState): { state: PortState; e
       break;
     }
     case 'opacity':
+    case 'flash':
+    case 'shake':
     case 'sound':
     case 'wait': break;
   }
