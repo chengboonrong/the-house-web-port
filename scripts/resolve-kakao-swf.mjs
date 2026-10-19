@@ -7,7 +7,8 @@
  */
 import { mkdir, writeFile, lstat } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { resolve, join } from 'node:path';
+import { resolve } from 'node:path';
+import { extractKakaoSwfs, redactedAttachment } from './lib/kakao-attachments.mjs';
 
 const article = process.argv[2];
 const filename = process.argv[3];
@@ -21,34 +22,24 @@ if (pageURL.protocol !== 'https:' || pageURL.hostname !== 'vidkidz.tistory.com' 
   throw new Error('Only public vidkidz.tistory.com numeric article pages are supported');
 }
 if (!/^[\w .-]+\.swf$/i.test(filename)) throw new Error('Invalid SWF filename');
-function decodeHTML(raw) {
-  return raw.replaceAll('&amp;', '&').replaceAll('&#38;', '&')
-    .replaceAll('&quot;', '"').replaceAll('&#x2F;', '/').replaceAll('\\/', '/');
-}
-const headers = { 'Accept': 'text/html,application/xhtml+xml' };
-const response = await fetch(pageURL, { headers, redirect: 'error', signal: AbortSignal.timeout(12000) });
+const response = await fetch(pageURL, {
+  headers: { Accept: 'text/html,application/xhtml+xml' },
+  redirect: 'error', signal: AbortSignal.timeout(12000)
+});
 if (!response.ok) throw new Error('Article response HTTP ' + response.status);
 const html = await response.text();
-if (html.length > 8_000_000) throw new Error('Unexpectedly large article');
-const matches = [];
-const pattern = /https?:\\?\/\\?\/[^\s"'<>`]+?\.swf(?:\?[^\s"'<>`]+)?/gi;
-for (const match of html.matchAll(pattern)) {
-  try {
-    const url = new URL(decodeHTML(match[0]));
-    if (url.protocol !== 'https:' || url.hostname !== 'blog.kakaocdn.net') continue;
-    const name = decodeURIComponent(url.pathname.split('/').pop() ?? '');
-    if (name.toLowerCase() !== filename.toLowerCase()) continue;
-    const expiry = url.searchParams.get('expires');
-    matches.push({ url, expiresAt: expiry && /^\d{10}$/.test(expiry) ? Number(expiry) * 1000 : null });
-  } catch { /* malformed attachment */ }
-}
+const matches = extractKakaoSwfs(html, filename);
 if (!matches.length) throw new Error('No matching public attachment URL in live article HTML');
-const candidate = matches.find(x => !x.expiresAt || x.expiresAt > Date.now()) ?? matches[0];
-const output = { article:pageURL.toString(), file:filename,
-  host:candidate.url.hostname, path:candidate.url.pathname,
-  expiresAt:candidate.expiresAt ? new Date(candidate.expiresAt).toISOString() : null,
-  expired: candidate.expiresAt !== null && candidate.expiresAt <= Date.now(),
-  binaryVerified:false, note:'No signature/query string is logged or committed.' };
+const candidate = matches.find(x => x.expiresAt === null || x.expiresAt > Date.now()) ?? matches[0];
+const metadata = redactedAttachment(candidate);
+const output = {
+  article: pageURL.toString(), file: filename,
+  host: metadata.host, path: metadata.pathname,
+  expiresAt: metadata.expiresAt, expired: metadata.expired,
+  hasTemporarySignature: metadata.hasTemporarySignature,
+  binaryVerified: false,
+  note: 'Metadata only; signed query parameters not recorded.'
+};
 if (!download) { console.log(JSON.stringify(output,null,2)); process.exit(0); }
 if (output.expired) throw new Error('Public article exposes only an expired signed link; no bypass attempted.');
 const target = resolve('research-private', filename);
