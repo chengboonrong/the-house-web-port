@@ -5,3 +5,5 @@ dist/
 *.swf
 original-assets/
 research-private/
+public/original/
+public/ruffle/
