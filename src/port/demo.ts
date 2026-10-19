@@ -21,8 +21,8 @@ export const demoSpec: PortSpec = {
       ] },
       { id: 'third', on: 'frame', when: { variable: 'frameClicks', equals: 2 }, increment: 'frameClicks', actions: [
         { kind: 'text', message: 'End of the fictional test sequence.' }, { kind: 'opacity', layer: 'room', to: 0.25, ms: 1100 }
-      ] }
-      ,{ id: 'enter-hall', on: 'door', actions: [
+      ] },
+      { id: 'enter-hall', on: 'door', actions: [
         {kind:'text',message:'You step into a different test room.'},
         {kind:'wait',ms:300},{kind:'goto',scene:'test-hall'}
       ] }
@@ -31,6 +31,6 @@ export const demoSpec: PortSpec = {
     id:'test-hall', width:640,height:480,background:'#22201f',
     layers:[{id:'hall',src:'/demo-hall.svg',visible:true}],
     hotspots:[{id:'return',bounds:{x:12,y:120,width:120,height:280}}],
-    rules:[{id:'back-room',on:'return',actions:[{kind:'goto',scene:'test-room'},{kind:'text',message:'Back to test room.'}]}]
+    rules:[{id:'back-room',on:'return',actions:[{kind:'text',message:'Returning to test room.'},{kind:'goto',scene:'test-room'}]}]
   }]
 };
