@@ -22,6 +22,8 @@ export function validateSpec(spec: PortSpec): string[] {
         if (action.kind === 'wait' && (!Number.isFinite(action.ms) || action.ms < 0)) errors.push('Invalid wait: ' + rule.id);
         if ((action.kind === 'show' || action.kind === 'opacity') && !scene.layers.some(l => l.id === action.layer)) errors.push('Missing layer: ' + action.layer);
         if (action.kind === 'opacity' && (!Number.isFinite(action.to) || action.to < 0 || action.to > 1 || !Number.isFinite(action.ms) || action.ms < 0)) errors.push('Invalid opacity: ' + rule.id);
+        if (action.kind === 'flash' && (!/^#[0-9a-fA-F]{6}$/.test(action.color) || !Number.isFinite(action.opacity) || action.opacity < 0 || action.opacity > 1 || !Number.isFinite(action.ms) || action.ms < 0 || action.ms > 60000)) errors.push('Invalid flash: ' + rule.id);
+        if (action.kind === 'shake' && (!Number.isFinite(action.strength) || action.strength < 0 || action.strength > 24 || !Number.isFinite(action.ms) || action.ms < 0 || action.ms > 60000)) errors.push('Invalid shake: ' + rule.id);
       }
     }
   }
