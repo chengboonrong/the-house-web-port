@@ -1,0 +1,50 @@
+{
+  "format": "the-house-2005-archive-candidates-v1",
+  "verifiedAt": "2026-10-20",
+  "sourcePage": "https://vidkidz.tistory.com/546",
+  "sourceClaim": "Korean archive's 2020 first-game five-room SWF attachment list, not original-distributor hashes",
+  "copyrightStatus": "unverified; do not redistribute",
+  "candidates": [
+    {
+      "name": "Diningroom.swf",
+      "room": "Dining Room",
+      "reportedMB": 0.42
+    },
+    {
+      "name": "Dining room.swf",
+      "room": "Dining Room alternate spelling",
+      "reportedMB": 0.42
+    },
+    {
+      "name": "Bathroom.swf",
+      "room": "Bathroom",
+      "reportedMB": 0.64
+    },
+    {
+      "name": "Kitchen.swf",
+      "room": "Kitchen",
+      "reportedMB": 0.44
+    },
+    {
+      "name": "Livingroom.swf",
+      "room": "Living Room",
+      "reportedMB": 0.83
+    },
+    {
+      "name": "Corridor.swf",
+      "room": "Corridor",
+      "reportedMB": 0.64
+    },
+    {
+      "name": "Credit.swf",
+      "room": "Credits",
+      "reportedMB": 0.17
+    }
+  ],
+  "unknowns": [
+    "Original loader/title SWF still unverified",
+    "Whether Dining room and Diningroom files are byte-identical",
+    "Actual original game distribution layout",
+    "SWF hashes, headers, runtime dependencies, author redistribution permission"
+  ]
+}
