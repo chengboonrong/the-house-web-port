@@ -24,7 +24,7 @@ describe('asset loader', () => {
 
   it('enumerates scene image URLs without blanks or duplicates', () => {
     const assets = sceneAssetUrls(demoSpec.scenes[0]);
-    expect(assets).toEqual(['/demo-room.svg','/demo-mark.svg']);
+    expect(assets).toEqual(['/demo-room.svg','/demo-mark.svg','/demo-flicker-1.svg','/demo-flicker-2.svg']);
     expect(portAssetUrls(demoSpec)).toEqual([...assets, '/demo-hall.svg']);
   });
 });
