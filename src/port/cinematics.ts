@@ -6,11 +6,17 @@ export class CinematicEffects {
   private readonly effects: Active[] = [];
   private currentNow = 0;
   private paused = false;
+  private reducedMotion = false;
   constructor(private readonly stage: HTMLElement, private readonly overlay: HTMLElement) {
     this.overlay.style.pointerEvents = 'none';
   }
+  setReducedMotion(value: boolean): void {
+    this.reducedMotion = value;
+    if (value) this.reset();
+  }
   enqueue(action: VisualAction, now: number): void {
     this.currentNow = now;
+    if (this.reducedMotion) return;
     if (action.ms <= 0) return;
     this.effects.push({action,started:now,pausedAt:this.paused?now:null,pausedTotal:0});
   }
