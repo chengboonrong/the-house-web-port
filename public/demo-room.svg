@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480">
+<defs>
+<linearGradient id="w" x2="0" y2="1"><stop stop-color="#4b4b46"/><stop offset="1" stop-color="#1b1b19"/></linearGradient>
+<radialGradient id="v"><stop offset=".15" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".75"/></radialGradient>
+<pattern id="noise" width="8" height="8" patternUnits="userSpaceOnUse"><path d="M1 2h1M6 5h1" stroke="#aaa" stroke-opacity=".14"/></pattern>
+</defs>
+<rect width="640" height="480" fill="url(#w)"/>
+<path d="M0 390L640 390V480H0Z" fill="#161615"/>
+<path d="M0 390H640M0 150H640" stroke="#666" stroke-opacity=".35" stroke-width="3"/>
+<path d="M160 0V390M480 0V390" stroke="#171715" stroke-width="8" opacity=".25"/>
+<rect x="244" y="75" width="158" height="183" fill="#181818" stroke="#888" stroke-width="13"/>
+<rect x="260" y="90" width="126" height="153" fill="#2c2a28"/>
+<path d="M279 224L368 111M275 117L374 221" stroke="#555" stroke-width="2" opacity=".3"/>
+<text x="323" y="187" text-anchor="middle" fill="#9a968b" font-size="64" font-family="serif">?</text>
+<path d="M65 364H575L540 407H100Z" fill="#625e55" stroke="#242321" stroke-width="5"/>
+<rect x="110" y="403" width="22" height="72" fill="#211f1d"/><rect x="507" y="403" width="22" height="72" fill="#211f1d"/>
+<rect width="640" height="480" fill="url(#noise)"/><rect width="640" height="480" fill="url(#v)"/>
+</svg>
