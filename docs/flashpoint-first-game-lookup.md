@@ -39,3 +39,13 @@ Do not add an unverified Flashpoint UUID to the project's game manifest.
 ## Next actionable task
 
 Find the first-game entry UUID/Launch Command in Flashpoint or contact Sinthai for a provenance-confirmed research copy. Ruffle host PR #8 can then accept the original files without inventing a replacement game.
+
+## Offline record review tool
+
+Export a **single** Flashpoint record as JSON from the Launcher/database interface, then run:
+
+```bash
+node scripts/inspect-flashpoint-entry.mjs ./entry.json
+```
+
+The script accepts `title`, `developer`, `releaseDate`, `platform`, `launchCommand`, and `id` (plus common capitalized aliases). It reports `METADATA_MATCH_ONLY` if basic metadata agrees with first-game identity, otherwise `UNVERIFIED` with reasons. A match does **not** prove authenticity of the downloaded file. It makes no network calls and never fetches copyrighted data.
