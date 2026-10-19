@@ -3,7 +3,6 @@ const stage = document.querySelector('#stage');
 const status = document.querySelector('#status');
 const input = document.querySelector('#file');
 let current = null;
-let objectUrl = null;
 const note = message => { status.textContent = message; };
 async function requireRuffle() {
   if (!window.RufflePlayer?.newest) {
@@ -15,8 +14,6 @@ async function requireRuffle() {
 function clear() {
   if (current?.remove) current.remove();
   current = null;
-  if (objectUrl) URL.revokeObjectURL(objectUrl);
-  objectUrl = null;
   stage.replaceChildren();
 }
 async function mount(source) {
@@ -53,16 +50,18 @@ document.querySelector('#local').addEventListener('click', async () => {
 });
 document.querySelector('#staged').addEventListener('click', async () => {
   try {
-    const response = await fetch('/port-manifest.json', {cache:'no-store'});
+    // The staging script writes the *local* manifest beside the original assets.
+    // Never consult the deliberately disabled public template.
+    const response = await fetch('/original/port-manifest.json', {cache:'no-store'});
     if (!response.ok) throw new Error('manifest HTTP '+response.status);
     const manifest = await response.json();
-    if (manifest.enabled !== true || typeof manifest.entry !== 'string' ||
+    if (manifest.enabled !== true || manifest.format !== 'swf-local-manifest-v1' || typeof manifest.entry !== 'string' ||
       !/^\/original\/[a-zA-Z0-9_./-]+\.swf$/i.test(manifest.entry) ||
       manifest.entry.split('/').includes('..')) {
       throw new Error('Authorized SWF entry not configured. Staging is disabled by default.');
     }
-    const swf = await fetch(manifest.entry, {method:'HEAD'});
-    if (!swf.ok) throw new Error('SWF not present at configured entry ('+swf.status+')');
+    // Do not require HEAD; SWF hosts and static file servers may deny it.
+    // Ruffle's URL loader is responsible for fetching dependencies relative to entry.
     await mount(manifest.entry);
   } catch (error) { note('Staged load unavailable: '+String(error)); }
 });
