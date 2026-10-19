@@ -43,6 +43,7 @@ export class SceneRenderer {
     if (this.sceneId !== scene.id) this.mount(scene);
     for (const [id, image] of this.layers) {
       image.style.display = state.visibleLayers[id] ? 'block' : 'none';
+      image.style.opacity = String(state.layerOpacity[id] ?? 1);
     }
   }
 
