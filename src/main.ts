@@ -20,7 +20,7 @@ root.innerHTML = `
   <div class="status" id="status" role="status"></div>
   <div class="controls">
     <button id="start">START DEMO</button><button id="inspect">INSPECT FRAME</button><button id="navigate">GO TO HALL</button>
-    <button id="reset">RESET</button><button id="save">SAVE</button><button id="load">RESUME</button><button id="mute" aria-pressed="false">MUTE</button>
+    <button id="reset">RESET</button><button id="effects" aria-pressed="false">REDUCE EFFECTS: OFF</button><button id="save">SAVE</button><button id="load">RESUME</button><button id="mute" aria-pressed="false">MUTE</button>
   </div>
   <details class="debug-panel"><summary>Playback Debugger</summary><pre id="debug-status"></pre><button id="export-trace">EXPORT TRACE</button><button id="clear-trace">CLEAR TRACE</button><pre id="debug-trace"></pre></details>
   <p class="legal">Original fictional test art and events. This is not The House's original SWF or a gameplay-faithful port.</p>
@@ -32,6 +32,16 @@ const status = document.querySelector<HTMLElement>('#status')!;
 const muteButton = document.querySelector<HTMLButtonElement>('#mute')!;
 const renderer = new SceneRenderer(stage);
 const cinematics = new CinematicEffects(stage, document.querySelector<HTMLElement>('#flash-overlay')!);
+const effectsButton = document.querySelector<HTMLButtonElement>('#effects')!;
+let reducedEffects = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function applyEffectsPreference() {
+  cinematics.setReducedMotion(reducedEffects);
+  renderer.setReducedMotion(reducedEffects);
+  effectsButton.textContent = reducedEffects ? 'REDUCE EFFECTS: ON' : 'REDUCE EFFECTS: OFF';
+  effectsButton.setAttribute('aria-pressed', String(reducedEffects));
+}
+applyEffectsPreference();
+effectsButton.addEventListener('click', () => { reducedEffects = !reducedEffects; applyEffectsPreference(); });
 const assets = new AssetLoader(decodeImage);
 const audio = new PortAudio();
 const trace = new PlaybackTrace();
