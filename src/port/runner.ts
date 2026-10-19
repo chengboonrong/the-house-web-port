@@ -13,6 +13,7 @@ export class PortRunner {
   private readonly clock = new PausableClock();
   private waitingUntil: number | null = null;
   private fade: Fade | null = null;
+  private lastNow = 0;
 
   constructor(private readonly spec: PortSpec, private readonly hooks: RunnerHooks = {}) {
     this.stateValue = createState(spec);
@@ -24,6 +25,7 @@ export class PortRunner {
   }
 
   start(now: number): void {
+    this.lastNow = now;
     this.clock.reset();
     this.clock.start(now);
     this.waitingUntil = null;
@@ -34,6 +36,7 @@ export class PortRunner {
   }
   reset(now: number): void { this.start(now); }
   setVisibility(visible: boolean, now: number): void {
+    this.lastNow = now;
     if (visible) this.clock.start(now);
     else this.clock.pause(now);
     this.stateValue = setPaused(this.stateValue, !visible);
@@ -43,12 +46,13 @@ export class PortRunner {
     const next = trigger(this.spec, this.stateValue, id);
     if (next === this.stateValue) return false;
     this.stateValue = next;
-    this.record('click', this.clock.value(), id);
+    this.record('click', this.clock.value(this.lastNow), id);
     this.emit();
     return true;
   }
 
   tick(now: number): void {
+    this.lastNow = now;
     if (this.stateValue.paused) return;
     const elapsed = this.clock.value(now);
     if (this.fade) {
