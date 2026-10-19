@@ -1,6 +1,8 @@
 import { consume, createState, setPaused, trigger } from './engine';
 import { PausableClock } from './clock';
 import type { PortSpec, PortState } from './types';
+import type { Checkpoint } from './save';
+import { sceneById } from './engine';
 
 export interface RunnerHooks {
   onChange?: (state: PortState) => void;
@@ -35,6 +37,23 @@ export class PortRunner {
     this.emit();
   }
   reset(now: number): void { this.start(now); }
+  restore(checkpoint: Checkpoint, now: number): void {
+    const scene = sceneById(this.spec, checkpoint.scene);
+    this.lastNow = now;
+    this.clock.reset();
+    this.clock.start(now);
+    this.fade = null;
+    this.waitingUntil = null;
+    this.stateValue = {
+      scene: scene.id, counters: { ...checkpoint.counters },
+      visibleLayers: { ...checkpoint.visibleLayers },
+      layerOpacity: { ...checkpoint.layerOpacity },
+      message: checkpoint.message, pending: [], paused: false
+    };
+    this.record('restore', 0);
+    this.emit();
+  }
+  get busy(): boolean { return this.waiting || this.stateValue.pending.length > 0; }
   setVisibility(visible: boolean, now: number): void {
     this.lastNow = now;
     if (visible) this.clock.start(now);
