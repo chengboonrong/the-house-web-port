@@ -35,7 +35,10 @@ const runner = new PortRunner(demoSpec, {
   onChange: state => {
     const scene = sceneById(demoSpec, state.scene);
     renderer.update(scene, state);
-    currentScene = scene.id;
+    if (currentScene !== scene.id) {
+      currentScene = scene.id;
+      requestAnimationFrame(syncStageSize);
+    }
     status.textContent = state.paused ? 'Paused in background.' : state.message || (ready ? 'Tap the picture frame.' : 'Loading scene assets...');
   },
   onSound: id => { audio.play(id); }
@@ -109,7 +112,7 @@ window.addEventListener('pageshow', () => {
   animationFrame = requestAnimationFrame(update);
 });
 
-void assets.preload(sceneAssetUrls(sceneById(demoSpec, currentScene))).then(() => {
+void assets.preload(sceneAssetUrls(sceneById(demoSpec, runner.state.scene))).then(() => {
   ready = true;
   runner.start(performance.now());
 }).catch(error => {
