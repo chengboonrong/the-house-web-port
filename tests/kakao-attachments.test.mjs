@@ -24,3 +24,20 @@ test('does not confuse unrelated filenames or archives', () => {
   assert.equal(extractKakaoSwfs('https://blog.kakaocdn.net/a/TheHouse2.swf', 'Diningroom.swf').length, 0);
   assert.equal(extractKakaoSwfs('https://elsewhere.example/a/Diningroom.swf').length, 0);
 });
+
+test('extracts opaque Kakao CDN path when SWF filename is only link text', () => {
+  const html = '<a class="file" href="https://blog.kakaocdn.net/dn/opaque/btq123/abcd?expires=1785509999&amp;signature=secret">Diningroom.swf 0.42MB</a>';
+  const found = extractKakaoSwfs(html, 'Diningroom.swf');
+  assert.equal(found.length, 1);
+  assert.equal(found[0].url.pathname, '/dn/opaque/btq123/abcd');
+  assert.equal(found[0].filename, 'Diningroom.swf');
+  assert.equal(JSON.stringify(redactedAttachment(found[0])).includes('secret'), false);
+});
+
+test('resolves opaque attachment with download attribute and excludes other files', () => {
+  const html = '<a download="Bathroom.swf" href="https://blog.kakaocdn.net/a/opaque?signature=hidden">Download</a>'
+    + '<a href="https://blog.kakaocdn.net/a/other" download="Kitchen.swf">Kitchen</a>';
+  const found = extractKakaoSwfs(html, 'Bathroom.swf');
+  assert.equal(found.length, 1);
+  assert.equal(found[0].filename, 'Bathroom.swf');
+});
