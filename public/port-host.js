@@ -48,25 +48,55 @@ document.querySelector('#local').addEventListener('click', async () => {
     note('Local SWF load failed: ' + String(error));
   }
 });
+const stagedSelect = document.querySelector('#staged-entry');
+let verifiedLocalEntries = [];
+let defaultEntry = null;
+function validOriginalPath(path) {
+  return typeof path === 'string' &&
+    /^\/original\/[a-zA-Z0-9_./-]+\.swf$/i.test(path) &&
+    !path.split('/').includes('..') && !path.split('/').includes('.');
+}
+async function loadInventory() {
+  const [manifestResponse, inventoryResponse] = await Promise.all([
+    fetch('/original/port-manifest.json', {cache:'no-store'}),
+    fetch('/original/inventory.json', {cache:'no-store'})
+  ]);
+  if (!manifestResponse.ok || !inventoryResponse.ok) throw new Error('Local manifest/inventory is missing');
+  const [manifest, inventory] = await Promise.all([manifestResponse.json(),inventoryResponse.json()]);
+  if (manifest.enabled !== true || manifest.format !== 'swf-local-manifest-v1' ||
+      inventory.format !== 'swf-local-ledger-v1' || !Array.isArray(inventory.files) ||
+      !validOriginalPath(manifest.entry)) throw new Error('Invalid local research manifest');
+  const entries = inventory.files.filter(file => file && typeof file.path === 'string' &&
+    validOriginalPath('/original/' + file.path)).map(file => '/original/' + file.path);
+  if (!entries.includes(manifest.entry)) throw new Error('Entrypoint not listed in staged inventory');
+  verifiedLocalEntries = entries;
+  defaultEntry = manifest.entry;
+  stagedSelect.replaceChildren();
+  for (const entry of entries) {
+    const option = document.createElement('option');
+    option.value = entry;
+    option.textContent = entry.split('/').pop();
+    stagedSelect.appendChild(option);
+  }
+  stagedSelect.value = defaultEntry;
+  return manifest.entry;
+}
+async function loadStagedEntry(entry) {
+  if (!verifiedLocalEntries.includes(entry)) throw new Error('SWF is not listed in local staged inventory');
+  const base = entry.slice(0, entry.lastIndexOf('/') + 1);
+  await mount({url:entry, base, allowScriptAccess:false});
+}
 document.querySelector('#staged').addEventListener('click', async () => {
   try {
-    // The staging script writes the *local* manifest beside the original assets.
-    // Never consult the deliberately disabled public template.
-    const response = await fetch('/original/port-manifest.json', {cache:'no-store'});
-    if (!response.ok) throw new Error('manifest HTTP '+response.status);
-    const manifest = await response.json();
-    if (manifest.enabled !== true || manifest.format !== 'swf-local-manifest-v1' || typeof manifest.entry !== 'string' ||
-      !/^\/original\/[a-zA-Z0-9_./-]+\.swf$/i.test(manifest.entry) ||
-      manifest.entry.split('/').includes('..')) {
-      throw new Error('Authorized SWF entry not configured. Staging is disabled by default.');
-    }
-    // Do not require HEAD; SWF hosts and static file servers may deny it.
-    // Ruffle's URL loader is responsible for fetching dependencies relative to entry.
-    // Preserve the original entry URL while explicitly setting the relative asset base.
-    // This is preferable to assuming all companion SWFs live next to /port.html.
-    const folder = manifest.entry.slice(0, manifest.entry.lastIndexOf('/') + 1);
-    await mount({ url: manifest.entry, base: folder, allowScriptAccess: false });
-  } catch (error) { note('Staged load unavailable: '+String(error)); }
+    const entry = await loadInventory();
+    await loadStagedEntry(entry);
+  } catch(error) {note('Local staged load failed: ' + String(error));}
+});
+document.querySelector('#load-entry').addEventListener('click', async () => {
+  try {
+    if (!verifiedLocalEntries.length) await loadInventory();
+    await loadStagedEntry(stagedSelect.value);
+  } catch(error) {note('Selected SWF load failed: '+String(error));}
 });
 document.querySelector('#reset').addEventListener('click', () => { clear(); note('Unloaded.'); });
 document.querySelector('#diagnostics').addEventListener('click', () => {
