@@ -22,7 +22,10 @@ export const demoSpec: PortSpec = {
         { kind: 'text', message: 'The room becomes still. (fictional test event)' }, { kind: 'wait', ms: 300 }
       ] },
       { id: 'third', on: 'frame', when: { variable: 'frameClicks', equals: 2 }, increment: 'frameClicks', actions: [
-        { kind: 'text', message: 'End of the fictional test sequence.' }, { kind: 'opacity', layer: 'room', to: 0.25, ms: 1100 }
+        { kind: 'text', message: 'End of the fictional test sequence.' },
+        { kind: 'flash', color: '#ffffff', opacity: 0.65, ms: 350 },
+        { kind: 'shake', strength: 7, ms: 600 },
+        { kind: 'opacity', layer: 'room', to: 0.25, ms: 1100 }
       ] },
       { id: 'enter-hall', on: 'door', actions: [
         {kind:'text',message:'You step into a different test room.'},
