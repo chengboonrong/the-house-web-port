@@ -12,9 +12,9 @@ test('navigates between two fictional rooms', async ({ app, screen }) => {
   await app.open('/');
   await expect(screen.getByRole('status')).toContainText('Tap the picture frame.');
   await screen.getByRole('button', 'GO TO HALL').click();
-  await expect(screen.getByRole('button', 'Explore the test room')).toHaveAttribute('aria-label','Scene test-hall');
+  await expect(screen.getByRole('button', 'Scene test-hall')).toBeVisible();
   await screen.getByRole('button', 'GO TO HALL').click();
-  await expect(screen.getByRole('button', 'Explore the test room')).toHaveAttribute('aria-label','Scene test-room');
+  await expect(screen.getByRole('button', 'Scene test-room')).toBeVisible();
 });
 
 test('saves and restores a stable checkpoint', async ({ app, screen }) => {
