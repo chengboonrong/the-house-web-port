@@ -8,6 +8,7 @@ export class SceneRenderer {
   private readonly layers = new Map<string, HTMLImageElement>();
   private readonly animated = new Map<string, AnimatedLayer>();
   private active = true;
+  private reducedMotion = false;
   private lastNow = 0;
   constructor(private readonly target: HTMLElement) {}
 
@@ -37,7 +38,7 @@ export class SceneRenderer {
         const player = new FramePlayer(layer.animation);
         player.start(now);
         if (!this.active) player.pause(now);
-        const src = player.current(now);
+        const src = this.reducedMotion ? player.sequence.frames[0] : player.current(now);
         image.src = src;
         this.animated.set(layer.id, { image, player, lastUrl: src });
       } else image.src = layer.src;
@@ -64,9 +65,18 @@ export class SceneRenderer {
     }
   }
 
+  setReducedMotion(value: boolean): void {
+    this.reducedMotion = value;
+    if (value) for (const layer of this.animated.values()) {
+      const first = layer.player.sequence.frames[0];
+      layer.image.src = first;
+      layer.lastUrl = first;
+    }
+  }
+
   tick(now: number): void {
     this.lastNow = now;
-    if (!this.active) return;
+    if (!this.active || this.reducedMotion) return;
     for (const layer of this.animated.values()) {
       const url = layer.player.current(now);
       if (url !== layer.lastUrl) {
