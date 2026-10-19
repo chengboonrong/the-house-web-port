@@ -62,7 +62,10 @@ document.querySelector('#staged').addEventListener('click', async () => {
     }
     // Do not require HEAD; SWF hosts and static file servers may deny it.
     // Ruffle's URL loader is responsible for fetching dependencies relative to entry.
-    await mount(manifest.entry);
+    // Preserve the original entry URL while explicitly setting the relative asset base.
+    // This is preferable to assuming all companion SWFs live next to /port.html.
+    const folder = manifest.entry.slice(0, manifest.entry.lastIndexOf('/') + 1);
+    await mount({ url: manifest.entry, base: folder, allowScriptAccess: false });
   } catch (error) { note('Staged load unavailable: '+String(error)); }
 });
 document.querySelector('#reset').addEventListener('click', () => { clear(); note('Unloaded.'); });
