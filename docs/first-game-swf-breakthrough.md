@@ -10,9 +10,9 @@ A November 12, 2020 Korean archive lists *The House 1* by SINTHAI Studio as five
 - Bathroom (2/5): https://vidkidz.tistory.com/543 — `Bathroom.swf` (site displays 0.64 MB)
 - Kitchen (3/5): https://vidkidz.tistory.com/544 — `Kitchen.swf` (site displays 0.44 MB)
 - Living room (4/5): https://vidkidz.tistory.com/545 — `Livingroom.swf` (site displays 0.83 MB)
-- Corridor (5/5): https://vidkidz.tistory.com/546 — consult attachment link for exact SWF basename (not confirmed here).
+- Corridor (5/5): https://vidkidz.tistory.com/546 — `Corridor.swf` (0.64 MB) and an additional `Credit.swf` (0.17 MB) listed on the same page.
 
-The dining-room page exposes an actual clickable `Diningroom.swf` attachment on `blog.kakaocdn.net`. **We have not yet fetched the bytes or verified their hash/signature**. File names and rounded sizes are the archive's claims; they are not provenance to the 2005 original release without further verification.
+The corridor page lists seven named SWF attachments in total: `Corridor.swf`, `Bathroom.swf`, `Dining room.swf`, `Diningroom.swf`, `Kitchen.swf`, `Livingroom.swf`, and `Credit.swf`. The dining-room page exposes an actual clickable `Diningroom.swf` attachment on `blog.kakaocdn.net`. **We have not yet fetched the bytes or verified their hash/signature**. File names and rounded sizes are the archive's claims; they are not provenance to the 2005 original release without further verification.
 
 Caveat: Some pages also link a `Dining room.swf` variant. Do not assume duplicate names contain identical bytes. Compare SHA-256 and SWF internal metadata after lawful acquisition.
 
