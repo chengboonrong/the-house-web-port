@@ -17,7 +17,7 @@ export interface EventRule {
 }
 export interface SceneSpec {
   id: string; width: number; height: number; background: string;
-  layers: { id: string; src: string; visible?: boolean }[];
+  layers: { id: string; src: string; visible?: boolean; animation?: { frames: string[]; fps: number; loop?: boolean } }[];
   hotspots: Hotspot[];
   rules: EventRule[];
 }
