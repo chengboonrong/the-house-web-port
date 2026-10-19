@@ -6,7 +6,9 @@ export type Action =
   | Readonly<{ kind: 'text'; message: string }>
   | Readonly<{ kind: 'sound'; id: string }>
   | Readonly<{ kind: 'wait'; ms: number }>
-  | Readonly<{ kind: 'goto'; scene: string }>;
+  | Readonly<{ kind: 'goto'; scene: string }>
+  | Readonly<{ kind: 'flash'; color: string; opacity: number; ms: number }>
+  | Readonly<{ kind: 'shake'; strength: number; ms: number }>;
 export interface Hotspot { id: string; bounds: Rect; cursor?: 'pointer' | 'default' }
 export interface EventRule {
   id: string;
