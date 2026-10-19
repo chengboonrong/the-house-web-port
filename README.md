@@ -36,3 +36,9 @@ See [research checklist](docs/research.md) and [iPhone Safari acceptance checkli
 ## Rights
 
 Repository-authored code is MIT licensed. Original The House game assets, scripts, sound, story, and trademark are not licensed by this repository's MIT license. Obtain permission before redistribution.
+
+## Current development branch
+
+The draft [data-driven port-core PR](https://github.com/chengboonrong/the-house-web-port/pull/6) introduces a generic scene schema, stage coordinate mapping, a deterministic foreground-time action runner, audio unlock/mute adapter, and Vitest tests. The demo remains intentionally fictional.
+
+Run `npm test` for unit tests and `npm run build` for a production build. No original assets or original gameplay are included. Original SWF compatibility and physical Safari validation remain deferred.
