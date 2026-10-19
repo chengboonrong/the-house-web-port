@@ -15,7 +15,7 @@ function syntheticSwf() {
   const frame=Buffer.alloc(4);
   frame.writeUInt16LE(12*256,0);frame.writeUInt16LE(1,2);
   const end=Buffer.from([0,0]);
-  const tag=Buffer.from([0x03,0x03,0x00,0x00,0x00,0x00]); // FileAttributes, AS3 flag false
+  const tag=Buffer.from([0x44,0x11,0x00,0x00,0x00,0x00]); // FileAttributes, AS3 flag false
   const body=Buffer.concat([rect,frame,tag,end]);
   const header=Buffer.alloc(8);header.write('FWS',0);header[3]=8;header.writeUInt32LE(8+body.length,4);
   return Buffer.concat([header,body]);
