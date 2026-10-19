@@ -17,7 +17,7 @@ export const demoSpec: PortSpec = {
         { kind: 'text', message: 'The room becomes still. (fictional test event)' }, { kind: 'wait', ms: 300 }
       ] },
       { id: 'third', on: 'frame', when: { variable: 'frameClicks', equals: 2 }, increment: 'frameClicks', actions: [
-        { kind: 'text', message: 'End of the fictional test sequence.' }
+        { kind: 'text', message: 'End of the fictional test sequence.' }, { kind: 'opacity', layer: 'room', to: 0.25, ms: 1100 }
       ] }
     ]
   }]
