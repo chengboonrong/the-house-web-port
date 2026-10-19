@@ -3,6 +3,7 @@ import { createState } from '../src/port/engine';
 import { demoSpec } from '../src/port/demo';
 import { createCheckpoint, parseCheckpoint } from '../src/port/save';
 import { FramePlayer, frameIndexAt } from '../src/port/frames';
+import { PortRunner } from '../src/port/runner';
 
 describe('checkpoint', () => {
   it('roundtrips only stable, valid states', () => {
@@ -13,6 +14,19 @@ describe('checkpoint', () => {
     expect(parseCheckpoint(JSON.stringify(checkpoint), demoSpec)?.counters.frameClicks).toBe(2);
     expect(createCheckpoint({ ...state, pending: [{ kind: 'wait', ms: 1 }] })).toBeNull();
     expect(createCheckpoint(state, true)).toBeNull();
+  });
+  it('restores counters and scene state without replaying pending events', () => {
+    const runner = new PortRunner(demoSpec);
+    runner.start(0);
+    runner.click('frame');
+    runner.tick(0);
+    const checkpoint = createCheckpoint(runner.state, runner.busy)!;
+    expect(checkpoint).not.toBeNull();
+    runner.reset(100);
+    runner.restore(checkpoint, 200);
+    expect(runner.state.counters.frameClicks).toBe(1);
+    expect(runner.state.visibleLayers.mark).toBe(true);
+    expect(runner.state.pending).toEqual([]);
   });
   it('rejects malformed, invalid scene, invalid opacity and oversized data', () => {
     const good = createCheckpoint(createState(demoSpec))!;
