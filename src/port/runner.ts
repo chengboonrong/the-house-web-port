@@ -1,12 +1,13 @@
 import { consume, createState, setPaused, trigger } from './engine';
 import { PausableClock } from './clock';
-import type { PortSpec, PortState } from './types';
+import type { Action, PortSpec, PortState } from './types';
 import type { Checkpoint } from './save';
 import { sceneById } from './engine';
 
 export interface RunnerHooks {
   onChange?: (state: PortState) => void;
   onSound?: (id: string) => void;
+  onVisual?: (action: Extract<Action, {kind: 'flash' | 'shake'}>, now: number) => void;
   onEvent?: (entry: { at: number; scene: string; event: string; detail?: string }) => void;
 }
 type Fade = { layer: string; from: number; to: number; start: number; end: number };
@@ -98,6 +99,7 @@ export class PortRunner {
       if (!effect) break;
       this.record(effect.kind, elapsed, effect.kind === 'goto' ? effect.scene : undefined);
       if (effect.kind === 'sound') this.hooks.onSound?.(effect.id);
+      if (effect.kind === 'flash' || effect.kind === 'shake') this.hooks.onVisual?.(effect, now);
       if (effect.kind === 'opacity') {
         const from = this.stateValue.layerOpacity[effect.layer] ?? 1;
         if (effect.ms > 0) {
