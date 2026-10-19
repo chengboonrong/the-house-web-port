@@ -6,6 +6,7 @@ import { PortRunner } from './port/runner';
 import { PortAudio } from './port/audio';
 import { AssetLoader, decodeImage, portAssetUrls } from './port/assets';
 import { SceneRenderer } from './port/renderer';
+import { CinematicEffects } from './port/cinematics';
 import { PlaybackTrace } from './port/trace';
 import { SAVE_KEY, createCheckpoint, parseCheckpoint } from './port/save';
 
@@ -14,7 +15,7 @@ root.innerHTML = `
 <div class="shell">
   <header><span>FLASH-TO-WEB • PORT ENGINE LAB</span><span>Safari-compatible design target</span></header>
   <section class="port-viewport" aria-label="Fictional scene viewport">
-    <div class="port-stage" id="stage" role="button" tabindex="0" aria-label="Explore the test room"></div>
+    <div class="port-stage" id="stage" role="button" tabindex="0" aria-label="Explore the test room"></div><div id="flash-overlay" class="flash-overlay" aria-hidden="true"></div>
   </section>
   <div class="status" id="status" role="status"></div>
   <div class="controls">
@@ -30,6 +31,7 @@ const viewport = document.querySelector<HTMLElement>('.port-viewport')!;
 const status = document.querySelector<HTMLElement>('#status')!;
 const muteButton = document.querySelector<HTMLButtonElement>('#mute')!;
 const renderer = new SceneRenderer(stage);
+const cinematics = new CinematicEffects(stage, document.querySelector<HTMLElement>('#flash-overlay')!);
 const assets = new AssetLoader(decodeImage);
 const audio = new PortAudio();
 const trace = new PlaybackTrace();
@@ -48,12 +50,14 @@ const runner = new PortRunner(demoSpec, {
     renderer.update(scene, state);
     if (currentScene !== scene.id) {
       currentScene = scene.id;
+      cinematics.reset();
       requestAnimationFrame(syncStageSize);
     }
     status.textContent = state.paused ? 'Paused in background.' : state.message || (ready ? 'Tap the picture frame.' : 'Loading scene assets...');
     refreshDebugger();
   },
   onSound: id => { audio.play(id); },
+  onVisual: (action, now) => { cinematics.enqueue(action, now); },
   onEvent: entry => { trace.append(entry); }
 });
 runner.start(performance.now());
@@ -103,6 +107,7 @@ document.querySelector('#load')!.addEventListener('click', () => {
     const raw = localStorage.getItem(SAVE_KEY);
     const checkpoint = raw ? parseCheckpoint(raw, demoSpec) : null;
     if (!checkpoint) { status.textContent = 'No valid checkpoint found.'; return; }
+    cinematics.reset();
     runner.restore(checkpoint, performance.now());
     status.textContent = 'Checkpoint resumed.';
   } catch { status.textContent = 'Browser storage unavailable.'; }
@@ -116,9 +121,9 @@ document.querySelector('#export-trace')!.addEventListener('click', () => {
 document.querySelector('#clear-trace')!.addEventListener('click', () => { trace.clear(); refreshDebugger(); });
 document.querySelector('#start')!.addEventListener('click', () => {
   void audio.unlock().catch(() => { /* sound is optional in the placeholder demo */ });
-  if (ready) { trace.clear(); runner.start(performance.now()); }
+  if (ready) { trace.clear(); cinematics.reset(); runner.start(performance.now()); }
 });
-document.querySelector('#reset')!.addEventListener('click', () => { if (ready) { trace.clear(); runner.reset(performance.now()); } });
+document.querySelector('#reset')!.addEventListener('click', () => { if (ready) { trace.clear(); cinematics.reset(); runner.reset(performance.now()); } });
 muteButton.addEventListener('click', () => {
   audio.setMuted(!audio.isMuted);
   muteButton.textContent = audio.isMuted ? 'UNMUTE' : 'MUTE';
@@ -127,6 +132,7 @@ muteButton.addEventListener('click', () => {
 document.addEventListener('visibilitychange', () => {
   runner.setVisibility(!document.hidden, performance.now());
   renderer.setVisibility(!document.hidden, performance.now());
+  cinematics.setVisibility(!document.hidden, performance.now());
   if (document.hidden) void audio.suspend();
   else void audio.resume().catch(() => {});
 });
@@ -138,6 +144,7 @@ let animationFrame = 0;
 function update(now: number) {
   runner.tick(now);
   renderer.tick(now);
+  cinematics.tick(now);
   animationFrame = requestAnimationFrame(update);
 }
 animationFrame = requestAnimationFrame(update);
@@ -145,11 +152,13 @@ window.addEventListener('pagehide', () => {
   cancelAnimationFrame(animationFrame);
   runner.setVisibility(false, performance.now());
   renderer.setVisibility(false, performance.now());
+  cinematics.setVisibility(false, performance.now());
   void audio.suspend();
 });
 window.addEventListener('pageshow', () => {
   runner.setVisibility(true, performance.now());
   renderer.setVisibility(true, performance.now());
+  cinematics.setVisibility(true, performance.now());
   cancelAnimationFrame(animationFrame);
   animationFrame = requestAnimationFrame(update);
 });
