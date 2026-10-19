@@ -27,3 +27,9 @@ The opt-in download:
 **Security:** Do not stage or serve this private directory publicly. Original copyright and redistribution permission have not been established. A valid SWF signature does not prove byte-for-byte identity with the 2005 release; further provenance comparison is essential.
 
 **Open questions:** The archive may provide a different markup structure, a signed URL may already be expired, or server protections may block requests. These failures must remain explicit. Nothing in this procedure proves first-game inter-room navigation or iPhone Safari compatibility.
+
+## Opaque CDN download paths
+
+Some public Tistory attachment anchors display a filename such as `Diningroom.swf` but use an opaque Kakao CDN path that **does not end in `.swf`**. The resolver now reads the anchor's download attribute or visible filename and associates it with the corresponding HTTPS `blog.kakaocdn.net` URL. Signed query parameters are never printed in diagnostic output.
+
+This corrects a potential false negative in earlier versions of the resolver. A matched link is still only a link: only after an authorized, successful private download, SWF signature validation, and SHA-256 hashing can we report verified binary bytes. The tool does not bypass access controls or re-sign expired links.
