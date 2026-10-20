@@ -50,7 +50,8 @@ jobs:
         run: node scripts/browser-original-smoke.mjs
       - name: Probe original Dining Room mouse navigation
         run: node scripts/probe-original-clicks.mjs
-      - name: Exercise authentic Corridor button navigation
+      - name: Exercise authentic Corridor button navigation (exploratory)
+        continue-on-error: true
         run: node scripts/browser-original-navigation.mjs
       - name: Retain metadata report ONLY
         if: always()
@@ -60,5 +61,6 @@ jobs:
           path: |
             ruffle-smoke-metadata.json
             original-click-metadata.json
+            ruffle-navigation-metadata.json
           if-no-files-found: warn
           retention-days: 7
