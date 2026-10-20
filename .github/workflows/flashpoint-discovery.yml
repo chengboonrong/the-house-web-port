@@ -1,0 +1,29 @@
+name: Flashpoint Original Metadata Discovery
+on:
+  pull_request:
+    paths:
+      - "scripts/search-flashpoint-api.mjs"
+      - ".github/workflows/flashpoint-discovery.yml"
+  workflow_dispatch:
+jobs:
+  search:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Query Flashpoint metadata (no game downloads)
+        run: |
+          node scripts/search-flashpoint-api.mjs > flashpoint-candidates.json
+          node -e 'const d=require("./flashpoint-candidates.json"); console.log(JSON.stringify({source:d.source,count:d.count,candidates:d.candidates,otherMatches:d.otherMatches.filter(x=>/house/i.test(x.title)).slice(0,15)},null,2))'
+      - name: Save metadata only
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flashpoint-candidate-metadata
+          path: flashpoint-candidates.json
+          retention-days: 7
