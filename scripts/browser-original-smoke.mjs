@@ -1,7 +1,7 @@
 import {chromium} from 'playwright';
 import {PNG} from 'pngjs';
 import {createHash} from 'node:crypto';
-import {writeFile} from 'node:fs/promises';
+import {writeFile,mkdir} from 'node:fs/promises';
 
 const url=process.env.RESEARCH_URL || 'http://127.0.0.1:5173/port.html';
 const browser=await chromium.launch({headless:true,env:{...process.env,LANG:'en_US.UTF-8',LC_ALL:'en_US.UTF-8'},args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl']});
@@ -23,6 +23,7 @@ try{
  const titleStageRatio=await page.locator('#stage').evaluate(el=>el.style.aspectRatio);
  const titleMetadata=await page.evaluate(()=>{const p=document.querySelector('#stage ruffle-player');const m=p?.ruffle?.()?.metadata;return m?{width:m.width,height:m.height,frameRate:m.frameRate,numFrames:m.numFrames,swfVersion:m.swfVersion,isActionScript3:m.isActionScript3}:null;});
  const buffer=await page.locator('#stage').screenshot();
+ if(process.env.CAPTURE_PREVIEWS==='1') {await mkdir('research-screenshots',{recursive:true});await writeFile('research-screenshots/01-title.png',buffer);}
  const png=PNG.sync.read(buffer);
  let distinct=new Set(),total=0,notBlack=0;
  for(let i=0;i<png.data.length;i+=16){
@@ -38,7 +39,9 @@ try{
  const roomStatus=await page.locator('#status').innerText();
  const roomMetadata=await page.evaluate(()=>{const p=document.querySelector('#stage ruffle-player');const m=p?.ruffle?.()?.metadata;return m?{width:m.width,height:m.height,frameRate:m.frameRate,numFrames:m.numFrames,swfVersion:m.swfVersion,isActionScript3:m.isActionScript3}:null;});
  const roomStageRatio=await page.locator('#stage').evaluate(el=>el.style.aspectRatio);
- const roomScreenshot=PNG.sync.read(await page.locator('#stage').screenshot());
+ const roomImage=await page.locator('#stage').screenshot();
+ if(process.env.CAPTURE_PREVIEWS==='1')await writeFile('research-screenshots/02-dining-room.png',roomImage);
+ const roomScreenshot=PNG.sync.read(roomImage);
  const roomColors=new Set();for(let i=0;i<roomScreenshot.data.length;i+=16)roomColors.add((roomScreenshot.data[i]<<16)|(roomScreenshot.data[i+1]<<8)|roomScreenshot.data[i+2]);
  const roomResourceSucceeded=resources.some(r=>r.path==='/original/Dining%20room.swf'&&r.status===200);
  if(roomStatus.includes('failed')||!roomResourceSucceeded||roomColors.size<12 || !titleMetadata || !roomMetadata ||
