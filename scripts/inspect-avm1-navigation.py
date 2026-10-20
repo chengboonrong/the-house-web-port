@@ -82,7 +82,12 @@ def parse_actions(data, offset, stop, signals, context):
         if code == 0x83:
             sections = payload.split(b"\0")
             url = sections[0].decode("latin1",errors="replace") if sections else ""
+            target = sections[1].decode("latin1",errors="replace") if len(sections) > 1 else ""
+            safe_target = target if target.lower() in ("", "_self", "_blank", "_parent", "_top") else "CUSTOM_OR_UNKNOWN"
             events.append({"source":context,"opcode":"GetURL",
+                "target": safe_target,
+                "urlClass": "RELATIVE_SWF" if re.fullmatch(r"[^:/?#]+\.swf",url,re.I)
+                    else "ABSOLUTE" if "://" in url else "OTHER",
                 "urlFileIndicators":re.findall(r"[A-Za-z0-9_ .-]+\.swf",url,re.I)[:10]})
         elif code in (0x9A,0x3D,0x52):
             events.append({"source":context,"opcode":ACTION_NAMES[code],
