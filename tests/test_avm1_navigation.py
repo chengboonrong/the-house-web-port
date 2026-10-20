@@ -17,6 +17,8 @@ class Avm1Tests(unittest.TestCase):
         mod.walk_tags(tag,0,len(tag),signals)
         self.assertEqual(signals["opcodes"]["GetURL"],1)
         self.assertEqual(signals["events"][0]["urlFileIndicators"],["Credit.swf"])
+        self.assertEqual(signals["events"][0]["target"], "")
+        self.assertEqual(signals["events"][0]["urlClass"], "RELATIVE_SWF")
         self.assertEqual(signals["errors"],[])
     def test_out_of_bounds_action_is_reported(self):
         signals={"opcodes":mod.Counter(),"events":[],"filenameIndicators":set(),"errors":[]}
