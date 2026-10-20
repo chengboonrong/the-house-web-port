@@ -1,5 +1,5 @@
 import {chromium} from 'playwright';
-import {writeFile} from 'node:fs/promises';
+import {writeFile,mkdir} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 
 const browser=await chromium.launch({headless:true,env:{...process.env,LANG:'en_US.UTF-8',LC_ALL:'en_US.UTF-8'},args:['--use-gl=angle','--use-angle=swiftshader']});
@@ -18,6 +18,7 @@ try{
  const expectedSource=responses.some(x=>x.path==='/original/Corridor.swf'&&x.status===200);
  if(!expectedSource)throw new Error('Corridor original SWF did not load');
  const status=await page.locator('#status').innerText();
+ if(process.env.CAPTURE_PREVIEWS==='1') {await mkdir('research-screenshots',{recursive:true});await page.locator('#stage').screenshot({path:'research-screenshots/03-corridor.png'}); }
  if(/failed|unavailable/i.test(status))throw new Error(status);
  // Scan the native 600 x 600 stage. We use actual pointer clicks and never
  // invoke Ruffle internal navigation APIs or synthetic SWF bytecode.
@@ -77,6 +78,7 @@ try{
    }
  }
  await page.waitForTimeout(1500);
+ if(process.env.CAPTURE_PREVIEWS==='1' && matching.some(x=>x.status===200))await page.locator('#stage').screenshot({path:'research-screenshots/04-after-click.png'});
  const afterImage=await node.screenshot();
  const afterMovie=await metadata();
  report.visualEvidence={
