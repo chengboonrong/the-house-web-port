@@ -22,3 +22,9 @@ The CI workflow `.github/workflows/original-webkit-probe.yml` runs the exact ori
 ## Scope
 
 This is real Linux WebKit execution, **not iPhone Safari hardware**. Completing all puzzles, verifying jump scares and actual audio, performance/memory and legal permission for public redistribution are still pending.
+
+## 2026-10-20 follow-up: THIRD consecutive original SWF room transition confirmed
+
+In https://github.com/chengboonrong/the-house-web-port/actions/runs/39429785055, after the original Corridor→Kitchen (one tap, 181 sampled colors) and Kitchen→Bathroom (one tap, 122 colors), **Bathroom→Dining room** succeeded with one original button tap at stage (19,589), HTTP 200, and 326 sampled colors after the load. All three steps ran within the same original Ruffle player session, with readyState 2, isPlaying true and zero JS errors. No host dropdown loading was used between these rooms. No original SWF files were committed.
+
+This third verified path is now a strict regression requirement of `scripts/browser-original-webkit-chain.mjs`. It establishes authentic room navigation continuity, not authentic completion of any puzzles or jumpscares. Linux WebKit is not iPhone Safari.
