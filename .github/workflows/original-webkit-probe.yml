@@ -4,6 +4,7 @@ on:
     paths:
       - ".github/workflows/original-webkit-probe.yml"
       - "scripts/browser-original-webkit-probe.mjs"
+      - "scripts/browser-original-webkit-chain.mjs"
       - "public/port-host.js"
       - "scripts/stage-original-gamezip.py"
   workflow_dispatch:
@@ -45,11 +46,15 @@ jobs:
           exit 1
       - name: Run genuine original game in WebKit
         run: node scripts/browser-original-webkit-probe.mjs
+      - name: Explore original Corridor Kitchen Bathroom touch chain
+        run: node scripts/browser-original-webkit-chain.mjs
       - name: Preserve diagnostics only, never game assets
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: original-webkit-metadata
-          path: original-webkit-metadata.json
+          path: |
+            original-webkit-metadata.json
+            original-webkit-chain.json
           retention-days: 7
           if-no-files-found: warn
