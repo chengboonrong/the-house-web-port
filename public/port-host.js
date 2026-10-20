@@ -11,16 +11,22 @@ async function requireRuffle() {
   }
   return window.RufflePlayer.newest();
 }
-function synchronizeNativeStage(player, retries=120) {
-  // Original title is 800x515, while room scenes are 600x600.
-  // Respect the actual SWF metadata, not the research page's fallback 4:3 frame.
-  if (current !== player) return;
-  const movie = player.ruffle?.()?.metadata;
-  if (movie?.width > 0 && movie?.height > 0) {
-    stage.style.aspectRatio = String(movie.width) + ' / ' + String(movie.height);
-  } else if (retries > 0) {
-    requestAnimationFrame(() => synchronizeNativeStage(player, retries - 1));
-  }
+function synchronizeNativeStage(player) {
+  // Continue watching the original SWF level: GetURL('Room.swf', '_level0')
+  // replaces the movie INSIDE this same player element, with potentially
+  // different native width/height. Stop automatically after unloading.
+  const sync = () => {
+    if (current !== player || !player.isConnected) return;
+    try {
+      const movie = player.ruffle?.()?.metadata;
+      if (movie?.width > 0 && movie?.height > 0) {
+        const ratio = String(movie.width) + ' / ' + String(movie.height);
+        if (stage.style.aspectRatio !== ratio) stage.style.aspectRatio = ratio;
+      }
+    } catch { /* Ruffle may be between two movies during a level-0 load. */ }
+    setTimeout(sync, 400);
+  };
+  sync();
 }
 function clear() {
   if (current?.remove) current.remove();
