@@ -28,3 +28,40 @@ AVM1 instructions can also live in DefineButton / DefineButton2 conditional acti
 4. Resolve author redistribution permission prior to public release.
 
 No original game binary assets are present in this repository.
+
+## 2026-10-20: DefineButton2 conditional actions decoded on actual originals
+
+We extended the parser to read the `ActionOffset` and `BUTTONCONDACTION` records from DefineButton2 (SWF tag 34), including condition flags and bounded AVM1 action records. The original archive workflow completed successfully.
+
+**Evidence:** https://github.com/chengboonrong/the-house-web-port/actions/runs/39367328798
+
+The button actions have condition `0x0008` (CondOverDownToOverUp, releasing a pressed button). Extracted **GetURL opcode** references are:
+
+| Origin | Button ID | Target SWF |
+|---|---:|---|
+| Dining room.swf | 90 | Bathroom.swf |
+| Bathroom.swf | 10 | Dining room.swf |
+| Bathroom.swf | 98 | Kitchen.swf |
+| Kitchen.swf | 10 | Bathroom.swf |
+| Kitchen.swf | 13 | Dining room.swf |
+| Kitchen.swf | 89 | Living room.swf |
+| Living room.swf | 11 | Kitchen.swf |
+| Living room.swf | 14 | Bathroom.swf |
+| Living room.swf | 17 | Dining room.swf |
+| Living room.swf | 108 | Corridor.swf |
+| Corridor.swf | 11 | Living room.swf |
+| Corridor.swf | 14 | Kitchen.swf |
+| Corridor.swf | 17 | Bathroom.swf |
+| Corridor.swf | 20 | Dining room.swf |
+| Corridor.swf | Sprite 80 | Credit.swf |
+| Credit.swf | 10 | Living room.swf |
+| Credit.swf | 13 | Kitchen.swf |
+| Credit.swf | 16 | Bathroom.swf |
+| Credit.swf | 19 | Dining room.swf |
+| Credit.swf | 22 | Corridor.swf |
+
+The report also contains two `Credit.swf` button GetURL actions with no matching `.swf` target; inspect them separately as possible external-site URLs. In `Title.swf`, two button GetURL actions likewise have no filename suffix; **do not assert the title-to-first-room transition from this scan**. The raw destinations were not recorded in order to avoid dumping arbitrary links and scripts.
+
+Button condition counts: Bathroom 23, Corridor 16, Credit 7, Dining Room 21, Kitchen 24, Living Room 32, Title 2. All files reported zero parser errors.
+
+**Limits:** This proves the specified navigation opcodes are embedded in original SWFs. It does not prove successful HTTP loading or identical behavior in Ruffle/Safari. DefineButton v1, PlaceObject2 clip actions, GetURL2 stack operands and other ActionScript features still need dedicated analysis.
