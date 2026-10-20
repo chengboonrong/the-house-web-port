@@ -21,7 +21,8 @@ jobs:
           curl -fLsS --retry 1 --max-time 45 --max-filesize 12000000 \
             "https://download.unstable.life/gib-roms/Games/a8b2e1fb-e408-2f0f-b1b8-08537b0e864b-1747960890788.zip" \
             -o /tmp/the-house-2005-flashpoint.zip
-          python scripts/audit-flashpoint-gamezip.py /tmp/the-house-2005-flashpoint.zip > original-evidence.json
+          python scripts/audit-flashpoint-gamezip.py /tmp/the-house-2005-flashpoint.zip \\
+            --launch-url 'http://www.sinthaistudio.com/thehouse1/index.html' > original-evidence.json
           cat original-evidence.json
       - name: Save metadata and hashes ONLY
         if: success()
