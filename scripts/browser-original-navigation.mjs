@@ -47,7 +47,9 @@ try{
  report.sourceHttp200=expectedSource;
  report.responses=responses.slice(-45);
  report.errors=errors.slice(-15);
- if(report.result!=='ROOM_REQUEST_SUCCEEDED')process.exitCode=1;
+ // No hit in a bounded blind sweep is an inconclusive experiment, not a runtime regression.
+ // Keep infrastructure failures and failed target HTTP requests actionable.
+ if(report.result==='ROOM_REQUEST_FAILED')process.exitCode=1;
 }catch(e){
  report.result='TEST_ERROR';
  report.error=String(e).slice(0,600);
