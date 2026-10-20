@@ -83,7 +83,7 @@ def parse_actions(data, offset, stop, signals, context):
             sections = payload.split(b"\0")
             url = sections[0].decode("latin1",errors="replace") if sections else ""
             target = sections[1].decode("latin1",errors="replace") if len(sections) > 1 else ""
-            safe_target = target if target.lower() in ("", "_self", "_blank", "_parent", "_top") else "CUSTOM_OR_UNKNOWN"
+            safe_target = target if re.fullmatch(r"[A-Za-z0-9_-]{0,32}", target) else "CUSTOM_UNSAFE_REDACTED"
             events.append({"source":context,"opcode":"GetURL",
                 "target": safe_target,
                 "urlClass": "RELATIVE_SWF" if re.fullmatch(r"[^:/?#]+\.swf",url,re.I)
