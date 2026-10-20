@@ -61,6 +61,7 @@ def frame_start(data):
 
 def inspect_one(data):
     button_ids=set()
+    sprite_ids=set()
     placed=[]
     def scan(start,end,container,depth):
         if depth>8:return
@@ -80,6 +81,7 @@ def inspect_one(data):
                 button_ids.add(struct.unpack_from("<H",data,pos)[0])
             elif code==39 and length>=4:
                 sprite=struct.unpack_from("<H",data,pos)[0]
+                sprite_ids.add(sprite)
                 scan(pos+4,stop,f"sprite:{sprite}",depth+1)
             elif code in (4,26):
                 try:
@@ -104,14 +106,21 @@ def inspect_one(data):
             pos=stop
     scan(frame_start(data),len(data),"main",0)
     buttons=[x for x in placed if x["characterId"] in button_ids]
+    sprite_instances=[x for x in placed if x["characterId"] in sprite_ids]
     # Deduplicate repeated placements in animation frames to bound metadata.
     unique={}
     for x in buttons:
         key=(x["container"],x["characterId"],x["depth"],tuple(x["originPx"]))
         unique[key]=x
+    sprite_unique={}
+    for x in sprite_instances:
+        key=(x["container"],x["characterId"],x["depth"],tuple(x["originPx"]))
+        sprite_unique[key]=x
     return {"buttonDefinitionCount":len(button_ids),"buttonPlacementCount":len(buttons),
+            "spriteDefinitionCount":len(sprite_ids),
+            "placedSpriteInstances":list(sprite_unique.values())[:200],
             "placedButtons":list(unique.values())[:200],
-            "note":"These are matrix origins, not shape bounds or confirmed click coordinates."}
+            "note":"These are local matrix origins; nested sprite and button transforms must be composed and timeline visibility verified before inferring global hitboxes."}
 
 def inspect(zipfile):
     out=[]
