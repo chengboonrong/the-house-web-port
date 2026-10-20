@@ -16,10 +16,12 @@ page.on('response',r=>{
   if(p.startsWith('/original/')&&p.toLowerCase().endsWith('.swf'))
     responses.push({path:p,status:r.status()});
 });
-const report={format:'original-the-house-webkit-two-navigation-chain-v1',
+const report={format:'original-the-house-webkit-three-navigation-chain-v2',
   environment:'Playwright Linux WebKit mobile touch, not physical iOS Safari',
   goal:'Corridor.swf -> Kitchen.swf -> Bathroom.swf -> Dining room.swf',
   steps:[],responses,errors,result:'UNTESTED'};
+let hostPageNavigations=0;
+page.on('framenavigated',frame=>{if(frame===page.mainFrame())hostPageNavigations++;});
 const stagePoint=async(x,y)=>{
   const b=await page.locator('#stage').boundingBox();
   if(!b)throw new Error('SWF stage not present');
@@ -44,6 +46,9 @@ try{
   await page.locator('#load-entry').click();
   await page.waitForTimeout(3000);
   if(!hasResponse('/original/Corridor.swf'))throw new Error('Original Corridor not HTTP 200');
+  const originalPlayer=await page.locator('#stage ruffle-player').elementHandle();
+  const navigationBaseline=hostPageNavigations;
+  if(!originalPlayer)throw new Error('Original Ruffle player absent');
   const plan=[
     {source:'Corridor.swf',destination:'Kitchen.swf',path:'/original/Kitchen.swf',
       // Verified original DefineButton2 ID 14 on Corridor main timeline,
@@ -74,6 +79,9 @@ try{
       await page.waitForTimeout(7400);
       record.postTransition=await renderStatus();
       record.nonFlat=record.postTransition.sampleColors>30;
+      record.samePlayerConnected=await originalPlayer.evaluate(el=>el.isConnected).catch(()=>false);
+      record.hostPath=new URL(page.url()).pathname;
+      record.hostReloads=hostPageNavigations-navigationBaseline;
     }
     report.steps.push(record);
     if(!record.http200 || !record.nonFlat)break;
@@ -83,10 +91,12 @@ try{
     second?.http200&&second.nonFlat?'TWO_ORIGINAL_ROOM_TRANSITIONS_RENDERED':
     first?.http200&&first.nonFlat?'FIRST_TRANSITION_ONLY':
     'FIRST_TRANSITION_NOT_CONFIRMED';
+  report.hostPageNavigations=hostPageNavigations-navigationBaseline;
   // Three unmodified original navigation transitions are now verified.
   // Fail CI if any request, recovery or stable playback regresses.
   if(report.result!=='THREE_ORIGINAL_ROOM_TRANSITIONS_RENDERED'||errors.length||
-     report.steps.some(step=>!step.postTransition?.player?.isPlaying))
+     report.steps.some(step=>!step.postTransition?.player?.isPlaying ||
+       !step.samePlayerConnected || step.hostPath!=='/port.html' || step.hostReloads!==0))
     process.exitCode=1;
 }catch(error){report.result='TEST_ERROR';report.failure=String(error);process.exitCode=1;}
 finally{
