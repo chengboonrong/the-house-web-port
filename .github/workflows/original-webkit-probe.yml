@@ -1,0 +1,55 @@
+name: Original WebKit Browser Probe
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/original-webkit-probe.yml"
+      - "scripts/browser-original-webkit-probe.mjs"
+      - "public/port-host.js"
+      - "scripts/stage-original-gamezip.py"
+  workflow_dispatch:
+jobs:
+  webkit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install official Ruffle and Playwright WebKit
+        run: |
+          npm install --no-save @ruffle-rs/ruffle@0.7.1 playwright@1.56.1 pngjs@7.0.0
+          npx playwright install --with-deps webkit
+          mkdir -p public/ruffle
+          cp -R node_modules/@ruffle-rs/ruffle/. public/ruffle/
+      - name: Stage verified original SWFs privately
+        run: |
+          curl -fLsS --retry 1 --max-time 45 --max-filesize 12000000 \
+            "https://download.unstable.life/gib-roms/Games/a8b2e1fb-e408-2f0f-b1b8-08537b0e864b-1747960890788.zip" \
+            -o /tmp/the-house-original.zip
+          python3 scripts/stage-original-gamezip.py /tmp/the-house-original.zip
+          node scripts/check-staged-assets.mjs
+      - name: Start localhost research host
+        run: |
+          npm run dev > /tmp/the-house-vite.log 2>&1 &
+          for n in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:5173/port.html > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/the-house-vite.log
+          exit 1
+      - name: Run genuine original game in WebKit
+        run: node scripts/browser-original-webkit-probe.mjs
+      - name: Preserve diagnostics only, never game assets
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: original-webkit-metadata
+          path: original-webkit-metadata.json
+          retention-days: 7
+          if-no-files-found: warn
