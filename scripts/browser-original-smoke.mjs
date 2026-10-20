@@ -20,6 +20,7 @@ try{
  const status=await page.locator('#status').innerText();
  const runtime=await page.evaluate(()=>{const p=document.querySelector('#stage ruffle-player');return {language:navigator.language,languages:navigator.languages,playerTag:p?.tagName,playerConstructor:p?.constructor?.name,customElementRegistered:Boolean(customElements.get('ruffle-player')),ruffleType:typeof p?.ruffle,loadType:typeof p?.load,playerProto:Object.getOwnPropertyNames(Object.getPrototypeOf(p??document.body)).slice(0,35),runtimeAPI:typeof window.RufflePlayer?.newest};});
  const hasPlayer=await page.locator('#stage ruffle-player').count()>0;
+ const titleStageRatio=await page.locator('#stage').evaluate(el=>el.style.aspectRatio);
  const titleMetadata=await page.evaluate(()=>{const p=document.querySelector('#stage ruffle-player');const m=p?.ruffle?.()?.metadata;return m?{width:m.width,height:m.height,frameRate:m.frameRate,numFrames:m.numFrames,swfVersion:m.swfVersion,isActionScript3:m.isActionScript3}:null;});
  const buffer=await page.locator('#stage').screenshot();
  const png=PNG.sync.read(buffer);
@@ -36,16 +37,18 @@ try{
  await page.waitForTimeout(3500);
  const roomStatus=await page.locator('#status').innerText();
  const roomMetadata=await page.evaluate(()=>{const p=document.querySelector('#stage ruffle-player');const m=p?.ruffle?.()?.metadata;return m?{width:m.width,height:m.height,frameRate:m.frameRate,numFrames:m.numFrames,swfVersion:m.swfVersion,isActionScript3:m.isActionScript3}:null;});
+ const roomStageRatio=await page.locator('#stage').evaluate(el=>el.style.aspectRatio);
  const roomScreenshot=PNG.sync.read(await page.locator('#stage').screenshot());
  const roomColors=new Set();for(let i=0;i<roomScreenshot.data.length;i+=16)roomColors.add((roomScreenshot.data[i]<<16)|(roomScreenshot.data[i+1]<<8)|roomScreenshot.data[i+2]);
  const roomResourceSucceeded=resources.some(r=>r.path==='/original/Dining%20room.swf'&&r.status===200);
  if(roomStatus.includes('failed')||!roomResourceSucceeded||roomColors.size<12 || !titleMetadata || !roomMetadata ||
    titleMetadata.width!==800 || titleMetadata.height!==515 || roomMetadata.width!==600 || roomMetadata.height!==600 ||
+   titleStageRatio!=='800 / 515' || roomStageRatio!=='600 / 600' ||
    titleMetadata.isActionScript3!==false || roomMetadata.isActionScript3!==false || errors.length>0)process.exitCode=1;
  result={
    format:'the-house-original-ruffle-chromium-smoke-v1',
-   status,hasPlayer,runtime,titleMetadata,
-   room:{status:roomStatus,metadata:roomMetadata,resourceSucceeded:roomResourceSucceeded,sampledUniqueColors:roomColors.size},
+   status,hasPlayer,runtime,titleMetadata,titleStageRatio,
+   room:{status:roomStatus,metadata:roomMetadata,stageRatio:roomStageRatio,resourceSucceeded:roomResourceSucceeded,sampledUniqueColors:roomColors.size},
    screenshotSHA256:createHash('sha256').update(buffer).digest('hex'),
    screenshotSize:{width:png.width,height:png.height},
    sampledUniqueColors:distinct.size,
