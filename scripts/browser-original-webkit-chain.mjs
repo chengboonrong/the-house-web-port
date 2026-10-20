@@ -83,9 +83,10 @@ try{
     second?.http200&&second.nonFlat?'TWO_ORIGINAL_ROOM_TRANSITIONS_RENDERED':
     first?.http200&&first.nonFlat?'FIRST_TRANSITION_ONLY':
     'FIRST_TRANSITION_NOT_CONFIRMED';
-  // Two authenticated transitions are now a proven regression baseline.
-  // The third is exploratory; a miss is not proof of game malfunction.
-  if(!first?.http200||!first.nonFlat||!second?.http200||!second.nonFlat||errors.length)
+  // Three unmodified original navigation transitions are now verified.
+  // Fail CI if any request, recovery or stable playback regresses.
+  if(report.result!=='THREE_ORIGINAL_ROOM_TRANSITIONS_RENDERED'||errors.length||
+     report.steps.some(step=>!step.postTransition?.player?.isPlaying))
     process.exitCode=1;
 }catch(error){report.result='TEST_ERROR';report.failure=String(error);process.exitCode=1;}
 finally{
