@@ -12,4 +12,8 @@ jobs:
           node-version: '22'
       - run: npm install
       - run: npm test
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s tests -p 'test_*.py' -v
       - run: npm run build
