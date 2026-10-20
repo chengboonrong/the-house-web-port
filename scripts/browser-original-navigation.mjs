@@ -95,7 +95,14 @@ try{
  report.errors=errors.slice(-15);
  // No hit in a bounded blind sweep is an inconclusive experiment, not a runtime regression.
  // Keep infrastructure failures and failed target HTTP requests actionable.
- if(report.result==='ROOM_REQUEST_FAILED')process.exitCode=1;
+ // Now that the authentic bottom-edge button has been located, this is a
+ // deterministic original-bytecode navigation regression, no longer a blind
+ // exploratory test. Require the verified button click and SWF HTTP 200.
+ if(report.result!=='ROOM_REQUEST_SUCCEEDED' ||
+    report.firstMatchingClick?.strategy!=='static-placement-probe' ||
+    report.firstMatchingClick?.request?.path!=='/original/Dining%20room.swf'){
+   process.exitCode=1;
+ }
 }catch(e){
  report.result='TEST_ERROR';
  report.error=String(e).slice(0,600);
