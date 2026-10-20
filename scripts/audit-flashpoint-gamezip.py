@@ -8,6 +8,8 @@ import argparse
 import hashlib
 import json
 import re
+from collections import Counter
+from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urlsplit
 from zipfile import ZipFile, BadZipFile
@@ -15,6 +17,26 @@ from zipfile import ZipFile, BadZipFile
 MAX_FILES = 5000
 MAX_FILE_BYTES = 64 * 1024 * 1024
 MAX_TOTAL_BYTES = 256 * 1024 * 1024
+
+class HtmlSignals(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.tags = Counter()
+        self.refs = set()
+    def handle_starttag(self, tag, attrs):
+        self.tags[tag.lower()] += 1
+        for key, value in attrs:
+            if key.lower() not in ('src', 'href', 'data', 'value', 'content') or not value:
+                continue
+            value = str(value).strip()
+            if key.lower() == 'content' and 'url=' in value.lower():
+                value = re.split(r'url=', value, flags=re.I)[-1].strip()
+            if len(value) > 300 or value.startswith(('data:', 'javascript:')):
+                continue
+            parsed = urlsplit(value)
+            path = parsed.netloc + parsed.path if parsed.netloc else parsed.path
+            if path and len(path) <= 220 and ('.' in path or '/' in path):
+                self.refs.add(path)
 
 def command_to_entry(command):
     command = str(command or "").strip().strip('"\'')
@@ -100,7 +122,12 @@ def inspect(path, launch_command=None):
             page = z.read(internal).decode('utf-8', errors='replace')
             # Names only. Never include arbitrary HTML/FlashVars or inline scripts in logs.
             references = sorted(set(re.findall(r'[A-Za-z0-9_ ./%-]+\\.swf', page, re.I)))
+            parser = HtmlSignals()
+            parser.feed(page)
             wrappers.append({"archivePath":internal,
+                             "htmlBytes": info.file_size,
+                             "elementCounts": dict(parser.tags.most_common(25)),
+                             "resourceAttributes": sorted(parser.refs)[:50],
                              "swfReferences":[x.strip()[-200:] for x in references[:50]]})
         return {"format":"flashpoint-gamezip-audit-v1",
                 "archive":archive.name,
