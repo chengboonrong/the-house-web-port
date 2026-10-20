@@ -97,6 +97,21 @@ try{
         break;
       }
     }
+    const png=PNG.sync.read(await stageNow.screenshot());
+    const colors=new Set();
+    for(let i=0;i<png.data.length;i+=16)
+      colors.add((png.data[i]<<16)|(png.data[i+1]<<8)|png.data[i+2]);
+    const playerStatus=await page.evaluate(()=>{
+      const p=document.querySelector('#stage ruffle-player');
+      return {exists:!!p,readyState:p?.readyState??null,
+        isPlaying:typeof p?.isPlaying==='boolean'?p.isPlaying:null,
+        hasRuffleApi:typeof p?.ruffle==='function'};
+    });
+    report.continuation.postTapPlayback={
+      sampleColors:colors.size,player:playerStatus,scriptErrors:errors.length
+    };
+    if(colors.size<15||!playerStatus.hasRuffleApi||!playerStatus.exists||errors.length)
+      throw new Error('Original player did not survive WebKit continuation taps');
     report.continuation.result=report.continuation.firstTrigger?.targetHttp===200
       ?'SECOND_ORIGINAL_ROOM_REQUEST_200'
       :'NO_SECOND_ROOM_REQUEST_OBSERVED';
