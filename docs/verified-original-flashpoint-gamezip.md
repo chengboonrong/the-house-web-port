@@ -49,3 +49,27 @@ Each of these files starts with `FWS`, consistent with an uncompressed Flash SWF
 5. Seek permission before publishing original game binaries or hosting a public copy.
 
 These verified archive files are **not** committed to the public repository. The ZIP evidence establishes archived bytes and hashes, but not the author's grant of redistribution rights or game completeness.
+
+## 2026-10-20 follow-up: confirmed HTML bootstrap and SWF 5/6 headers
+
+The original archived `index.html` is 3,104 bytes and uses Flash `object`/`param` tags. Its attributes specifically reference **`Title.swf`**, `Scripts/swfobject_modified.js` and optional `Scripts/expressInstall.swf`. `Title.swf` is the genuine original Flash bootstrap file. Evidence: https://github.com/chengboonrong/the-house-web-port/actions/runs/39360361509
+
+The first-game original-host files were read-only scanned in the ephemeral runner. All are FWS files, with SWF file versions 5 or 6. This is consistent with a historical **AVM1 / ActionScript 1–2** era game, but definitive script opcode/VM confirmation requires detailed tag/bytecode analysis.
+
+Heuristically detected cross-room SWF filenames in original binary strings:
+
+| Original file | SWF version | Candidate SWF references (not proven executed) |
+|---|---:|---|
+| Title.swf | 6 | No literal `.swf` match |
+| Dining room.swf | 6 | Bathroom.swf |
+| Bathroom.swf | 6 | Dining room.swf, Kitchen.swf |
+| Kitchen.swf | 5 | Bathroom.swf, Dining room.swf, Living room.swf |
+| Living room.swf | 5 | Bathroom.swf, Corridor.swf, Dining room.swf, Kitchen.swf |
+| Corridor.swf | 5 | Bathroom.swf, Credit.swf, Dining room.swf, Kitchen.swf, Living room.swf |
+| Credit.swf | 5 | Bathroom.swf, Corridor.swf, Dining room.swf, Kitchen.swf, Living room.swf |
+
+These are **embedded string matches**, not yet verified `loadMovie()` calls; they could represent menus/links or dormant scripts. Exact casing and spaces must be preserved for Ruffle/virtual filesystem access.
+
+Evidence: https://github.com/chengboonrong/the-house-web-port/actions/runs/39360466144
+
+**Next technical step:** inspect DoAction bytecode and verify which transitions use `loadMovie` vs `getURL`; then stage the original files privately under a same-origin Ruffle base path.
