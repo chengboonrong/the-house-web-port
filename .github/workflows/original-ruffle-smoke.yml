@@ -4,6 +4,7 @@ on:
     paths:
       - ".github/workflows/original-ruffle-smoke.yml"
       - "scripts/browser-original-smoke.mjs"
+      - "scripts/probe-original-clicks.mjs"
       - "public/port-host.js"
       - "scripts/stage-original-gamezip.py"
   workflow_dispatch:
@@ -46,11 +47,15 @@ jobs:
           exit 1
       - name: Launch authentic Title SWF in Chromium
         run: node scripts/browser-original-smoke.mjs
+      - name: Probe original Dining Room mouse navigation
+        run: node scripts/probe-original-clicks.mjs
       - name: Retain metadata report ONLY
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: original-ruffle-browser-metadata
-          path: ruffle-smoke-metadata.json
+          path: |
+            ruffle-smoke-metadata.json
+            original-click-metadata.json
           if-no-files-found: warn
           retention-days: 7
