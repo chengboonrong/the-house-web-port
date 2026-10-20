@@ -64,6 +64,45 @@ try{
       report.corridor.frames.push({delayMs:delay,uniqueSampledColors:unique.size});
     }
   }
+  // SECOND-STEP exploratory original interaction — NEVER inject a synthetic
+  // navigation request. Dining's Bathroom button is in nested sprite 91, so
+  // the original button's local (398.45,194.35) origin is NOT a global hitbox.
+  // Probe limited nearby coordinates, preserving the puzzle's own state.
+  report.continuation={from:'Dining room.swf',wanted:'Bathroom.swf',
+    attempted:0,result:'NOT_ATTEMPTED',possiblePuzzleGate:true};
+  const roomRecovered=report.corridor.frames.some(f=>f.uniqueSampledColors>30);
+  if(target?.status===200 && roomRecovered){
+    const priorBathroom=requests.filter(r=>r.path==='/original/Bathroom.swf').length;
+    const stageNow=page.locator('#stage');
+    // Potential outer transform means the nested origin may differ from
+    // rendered coordinates. This bounded probe is intentionally inconclusive.
+    const candidatePoints=[
+      [398,194],[410,205],[425,220],[385,180],
+      [450,240],[470,280],[500,300],
+      [25,585],[65,585],[135,585],[260,585],[365,585],
+      [398,150],[350,195],[400,250]
+    ];
+    for(const [x,y] of candidatePoints){
+      const box=await stageNow.boundingBox();
+      if(!box)break;
+      const px=Math.round(box.x+box.width*x/600);
+      const py=Math.round(box.y+box.height*y/600);
+      if(px<box.x||px>=box.x+box.width||py<box.y||py>=box.y+box.height)continue;
+      await page.touchscreen.tap(px,py);
+      report.continuation.attempted++;
+      await page.waitForTimeout(200);
+      if(requests.filter(r=>r.path==='/original/Bathroom.swf').length>priorBathroom){
+        report.continuation.firstTrigger={sourceStageX:x,sourceStageY:y,targetHttp:
+          requests.findLast(r=>r.path==='/original/Bathroom.swf')?.status};
+        break;
+      }
+    }
+    report.continuation.result=report.continuation.firstTrigger?.targetHttp===200
+      ?'SECOND_ORIGINAL_ROOM_REQUEST_200'
+      :'NO_SECOND_ROOM_REQUEST_OBSERVED';
+    // A miss cannot establish a Ruffle or WebKit regression because the button
+    // is nested and the puzzle state is not controlled by this probe.
+  }
   // Distinguish source/start success from an actual end-to-end WebKit transition.
   report.result=target?.status===200&&report.corridor.frames.some(f=>f.uniqueSampledColors>30)
     ?'WEBKIT_TOUCH_TRANSITION_RENDERED'
