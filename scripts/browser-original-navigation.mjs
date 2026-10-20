@@ -1,5 +1,6 @@
 import {chromium} from 'playwright';
 import {writeFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
 
 const browser=await chromium.launch({headless:true,env:{...process.env,LANG:'en_US.UTF-8',LC_ALL:'en_US.UTF-8'},args:['--use-gl=angle','--use-angle=swiftshader']});
 const page=await browser.newPage({viewport:{width:960,height:840},locale:'en-US'});
@@ -21,6 +22,13 @@ try{
  // Scan the native 600 x 600 stage. We use actual pointer clicks and never
  // invoke Ruffle internal navigation APIs or synthetic SWF bytecode.
  const node=page.locator('#stage');
+ const beforeImage=await node.screenshot();
+ const imageHash=bytes=>createHash('sha256').update(bytes).digest('hex');
+ const metadata=()=>page.evaluate(()=>{
+   const movie=document.querySelector('#stage ruffle-player')?.ruffle?.()?.metadata;
+   return movie?{width:movie.width,height:movie.height,numFrames:movie.numFrames,frameRate:movie.frameRate,swfVersion:movie.swfVersion}:null;
+ });
+ const beforeMovie=await metadata();
  let matching=[];
  let clicks=0;
  const wanted=/^\/original\/(?:Bathroom|Kitchen|Living%20room|Dining%20room|Credit)\.swf$/i;
@@ -69,6 +77,15 @@ try{
    }
  }
  await page.waitForTimeout(1500);
+ const afterImage=await node.screenshot();
+ const afterMovie=await metadata();
+ report.visualEvidence={
+   beforeScreenshotSHA256:imageHash(beforeImage),
+   afterScreenshotSHA256:imageHash(afterImage),
+   changed:imageHash(beforeImage)!==imageHash(afterImage),
+   beforeMovie,afterMovie,
+   caution:'Animation may change pixels even without navigation; images are not retained.'
+ };
  report.result=matching.some(x=>x.status===200)?'ROOM_REQUEST_SUCCEEDED':matching.length?'ROOM_REQUEST_FAILED':'NO_NAVIGATION_OBSERVED';
  report.clicksAttempted=clicks;
  report.sourceHttp200=expectedSource;
