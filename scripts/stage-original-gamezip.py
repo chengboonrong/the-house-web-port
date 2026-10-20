@@ -36,7 +36,7 @@ def stage_gamezip(zip_path, destination):
             if (not rel or not SAFE_NAME.fullmatch(rel) or
                     any(p in ("", ".", "..") for p in parts) or "\\" in rel):
                 raise ValueError("Unsafe historical game path: " + rel)
-            if info.external_attr >> 16 & stat.S_IFMT == stat.S_IFLNK:
+            if stat.S_IFMT(info.external_attr >> 16) == stat.S_IFLNK:
                 raise ValueError("Symlink ZIP entry refused")
             if info.file_size > MAX_SINGLE:
                 raise ValueError("Oversized original resource")
