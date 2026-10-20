@@ -1,0 +1,32 @@
+name: The House 2005 GameZIP Evidence
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/the-house-original-evidence.yml"
+      - "scripts/audit-flashpoint-gamezip.py"
+  workflow_dispatch:
+jobs:
+  inspect-original:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Obtain verified-UUID Flashpoint archive in ephemeral runner
+        run: |
+          curl -fLsS --retry 1 --max-time 45 --max-filesize 12000000 \
+            "https://download.unstable.life/gib-roms/Games/a8b2e1fb-e408-2f0f-b1b8-08537b0e864b-1747960890788.zip" \
+            -o /tmp/the-house-2005-flashpoint.zip
+          python scripts/audit-flashpoint-gamezip.py /tmp/the-house-2005-flashpoint.zip > original-evidence.json
+          cat original-evidence.json
+      - name: Save metadata and hashes ONLY
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: the-house-original-file-metadata
+          path: original-evidence.json
+          retention-days: 7
