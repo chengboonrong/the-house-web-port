@@ -87,6 +87,14 @@ try{
   await page.locator('#load-entry').click();
   await page.waitForTimeout(3500);
   await snapshot('dining-room-loaded');
+  const titleCheck=report.checks.find(c=>c.label==='title-loaded-no-extra-gesture');
+  const roomCheck=report.checks.find(c=>c.label==='dining-room-loaded');
+  if(!titleCheck || !roomCheck ||
+     titleCheck.contextCount<1 || titleCheck.bufferSourceStarts<1 ||
+     roomCheck.contextCount<1 || roomCheck.bufferSourceStarts<=titleCheck.bufferSourceStarts ||
+     !roomCheck.contextStates.includes('running')){
+    throw new Error('Actual original WebAudio initialization or source-start evidence missing');
+  }
   report.status='PROBE_COMPLETE';
   if(!requests.some(r=>r.path==='/original/Title.swf'&&r.status===200)
      || !requests.some(r=>r.path==='/original/Dining%20room.swf'&&r.status===200))
