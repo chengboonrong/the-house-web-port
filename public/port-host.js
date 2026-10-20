@@ -11,10 +11,22 @@ async function requireRuffle() {
   }
   return window.RufflePlayer.newest();
 }
+function synchronizeNativeStage(player, retries=120) {
+  // Original title is 800x515, while room scenes are 600x600.
+  // Respect the actual SWF metadata, not the research page's fallback 4:3 frame.
+  if (current !== player) return;
+  const movie = player.ruffle?.()?.metadata;
+  if (movie?.width > 0 && movie?.height > 0) {
+    stage.style.aspectRatio = String(movie.width) + ' / ' + String(movie.height);
+  } else if (retries > 0) {
+    requestAnimationFrame(() => synchronizeNativeStage(player, retries - 1));
+  }
+}
 function clear() {
   if (current?.remove) current.remove();
   current = null;
   stage.replaceChildren();
+  stage.style.aspectRatio = '';
 }
 async function mount(source) {
   const ruffle = await requireRuffle();
@@ -26,6 +38,7 @@ async function mount(source) {
   try {
     // URL mode preserves relative dependency resolution for same-origin staged collections.
     await player.ruffle().load(source);
+    synchronizeNativeStage(player);
     note('SWF entrypoint loaded. Game completeness and iPhone Safari compatibility are unverified. Inspect the original actions, audio, and network requests.');
   } catch (error) {
     note('Ruffle loading failed: ' + String(error));
@@ -43,6 +56,7 @@ document.querySelector('#local').addEventListener('click', async () => {
   stage.appendChild(player);
   try {
     await player.ruffle().load({data: await file.arrayBuffer()});
+    synchronizeNativeStage(player);
     note('Single SWF supplied to Ruffle; external relative dependencies are NOT mapped. This does not establish a complete port.');
   } catch (error) {
     note('Local SWF load failed: ' + String(error));
