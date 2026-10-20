@@ -90,6 +90,43 @@ def parse_actions(data, offset, stop, signals, context):
     if steps >= MAX_TAGS:
         signals["errors"].append("action count limit hit")
 
+def parse_button2(data, start, end, signals):
+    """Parse DefineButton2 BUTTONCONDACTION records by ActionOffset.
+
+    ActionOffset is measured from the start of its own 2-byte field;
+    CondActionSize is measured from the start of its own 2-byte field.
+    Avoids parsing variable-size BUTTONRECORD matrices/transforms.
+    """
+    if start + 5 > end:
+        signals["errors"].append("short DefineButton2")
+        return
+    button_id = struct.unpack_from("<H", data, start)[0]
+    action_field = start + 3
+    action_offset = struct.unpack_from("<H", data, action_field)[0]
+    if not action_offset:
+        return
+    cur = action_field + action_offset
+    if cur < start + 5 or cur + 4 > end:
+        signals["errors"].append("invalid DefineButton2 ActionOffset")
+        return
+    count = 0
+    while cur + 4 <= end and count < 500:
+        size = struct.unpack_from("<H", data, cur)[0]
+        condition = struct.unpack_from("<H", data, cur + 2)[0]
+        following = (cur + size) if size else end
+        if following > end or following <= cur + 3:
+            signals["errors"].append("invalid ButtonCondAction bounds")
+            return
+        context = f"button:{button_id}:condition:{condition:04x}"
+        signals["buttonConditions"] += 1
+        parse_actions(data, cur + 4, following, signals, context)
+        count += 1
+        if size == 0:
+            return
+        cur = following
+    if count >= 500:
+        signals["errors"].append("button condition limit exceeded")
+
 def walk_tags(data, begin, end, signals, context="main", depth=0):
     if depth > MAX_DEPTH:
         signals["errors"].append("sprite nesting too deep")
@@ -116,6 +153,8 @@ def walk_tags(data, begin, end, signals, context="main", depth=0):
             begin_action = tag_start + (2 if code==59 else 0)
             if begin_action <= pos:
                 parse_actions(data,begin_action,pos,signals,context)
+        elif code == 34:
+            parse_button2(data, tag_start, pos, signals)
         elif code == 39 and size >= 4:
             sprite_id = struct.unpack_from("<H",data,tag_start)[0]
             walk_tags(data,tag_start+4,pos,signals,f"sprite:{sprite_id}",depth+1)
@@ -130,15 +169,16 @@ def inspect_archive(path):
             if item.file_size>MAX_FILE:raise ValueError("unexpected large SWF")
             data=z.read(item)
             if not data.startswith(b"FWS") or len(data)<13:raise ValueError("Only valid uncompressed FWS supported")
-            signals={"opcodes":Counter(),"events":[],"filenameIndicators":set(),"errors":[]}
+            signals={"opcodes":Counter(),"events":[],"filenameIndicators":set(),"errors":[],"buttonConditions":0}
             walk_tags(data,frame_data_offset(data),len(data),signals)
             files.append({"filename":item.filename.removeprefix(PREFIX),
                 "swfVersion":data[3],"opcodeCounts":dict(signals["opcodes"]),
                 "navigationSignals":signals["events"][:100],
+                "buttonConditions":signals["buttonConditions"],
                 "filenameIndicators":sorted(signals["filenameIndicators"]),
                 "errors":signals["errors"][:20]})
     return {"format":"the-house-2005-avm1-navigation-evidence-v1","files":files,
-      "limitations":"Top-level and nested sprites DoAction/DoInitAction only; no button-condition action parsing, no dynamic execution, and no proof of actual transitions. Use FFDec for full call sites."}
+      "limitations":"DoAction/DoInitAction plus DefineButton2 conditional actions only; DefineButton v1, clip actions and AVM1 stack semantics remain unparsed. Not proof of runtime activation. Use FFDec for full call sites."}
 
 if __name__=="__main__":
     if len(sys.argv)!=2:raise SystemExit("Usage: python scripts/inspect-avm1-navigation.py gamezip.zip")
