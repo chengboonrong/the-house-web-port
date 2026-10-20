@@ -5,6 +5,7 @@ on:
       - ".github/workflows/the-house-original-evidence.yml"
       - "scripts/audit-flashpoint-gamezip.py"
       - "scripts/inspect-archive-original-swf.py"
+      - "scripts/inspect-avm1-navigation.py"
   workflow_dispatch:
 jobs:
   inspect-original:
@@ -26,6 +27,8 @@ jobs:
           cat original-evidence.json
           python scripts/inspect-archive-original-swf.py /tmp/the-house-2005-flashpoint.zip > original-swf-references.json
           cat original-swf-references.json
+          python scripts/inspect-avm1-navigation.py /tmp/the-house-2005-flashpoint.zip > avm1-navigation.json
+          cat avm1-navigation.json
       - name: Save metadata and hashes ONLY
         if: success()
         uses: actions/upload-artifact@v4
@@ -34,4 +37,5 @@ jobs:
           path: |
             original-evidence.json
             original-swf-references.json
+            avm1-navigation.json
           retention-days: 7
