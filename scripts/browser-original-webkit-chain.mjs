@@ -3,7 +3,7 @@ import {PNG} from 'pngjs';
 import {writeFile} from 'node:fs/promises';
 
 /** Real original-game, original-button, same-player chain investigation.
- * Corridor -> Kitchen -> Bathroom via verified AVM1 GetURL(_level0).
+ * Corridor -> Kitchen -> Bathroom -> Dining Room via verified AVM1 GetURL(_level0).
  * No injected game state, modified bytecode or third-party asset artifacts.
  */
 const browser=await webkit.launch({headless:true,env:{...process.env,LANG:'en_US.UTF-8',LC_ALL:'en_US.UTF-8'}});
@@ -18,7 +18,7 @@ page.on('response',r=>{
 });
 const report={format:'original-the-house-webkit-two-navigation-chain-v1',
   environment:'Playwright Linux WebKit mobile touch, not physical iOS Safari',
-  goal:'Corridor.swf -> Kitchen.swf -> Bathroom.swf',
+  goal:'Corridor.swf -> Kitchen.swf -> Bathroom.swf -> Dining room.swf',
   steps:[],responses,errors,result:'UNTESTED'};
 const stagePoint=async(x,y)=>{
   const b=await page.locator('#stage').boundingBox();
@@ -51,7 +51,10 @@ try{
       buttons:[[266,589],[280,589],[305,589],[340,589],[280,595]]},
     {source:'Kitchen.swf',destination:'Bathroom.swf',path:'/original/Bathroom.swf',
       // Verified Kitchen button ID 10 at (144.5,585.3).
-      buttons:[[151,589],[165,589],[190,589],[210,589],[165,595]]}
+      buttons:[[151,589],[165,589],[190,589],[210,589],[165,595]]},
+    {source:'Bathroom.swf',destination:'Dining room.swf',path:'/original/Dining%20room.swf',
+      // Verified original Bathroom button ID 10 at (13.3,585.3).
+      buttons:[[19,589],[33,589],[57,589],[85,589],[33,595]]}
   ];
   for(const step of plan){
     const previous=responses.filter(r=>r.path===step.path).length;
@@ -75,13 +78,15 @@ try{
     report.steps.push(record);
     if(!record.http200 || !record.nonFlat)break;
   }
-  const first=report.steps[0],second=report.steps[1];
-  report.result=second?.http200&&second.nonFlat?'TWO_ORIGINAL_ROOM_TRANSITIONS_RENDERED':
-    first?.http200&&first.nonFlat?'FIRST_TRANSITION_OK_SECOND_NOT_OBSERVED':
+  const first=report.steps[0],second=report.steps[1],third=report.steps[2];
+  report.result=third?.http200&&third.nonFlat?'THREE_ORIGINAL_ROOM_TRANSITIONS_RENDERED':
+    second?.http200&&second.nonFlat?'TWO_ORIGINAL_ROOM_TRANSITIONS_RENDERED':
+    first?.http200&&first.nonFlat?'FIRST_TRANSITION_ONLY':
     'FIRST_TRANSITION_NOT_CONFIRMED';
-  if(!first?.http200||!first.nonFlat||errors.length)process.exitCode=1;
-  // A second transition is exploratory until the exact active button state
-  // is confirmed; do not fail CI on an unobserved puzzle-dependent route.
+  // Two authenticated transitions are now a proven regression baseline.
+  // The third is exploratory; a miss is not proof of game malfunction.
+  if(!first?.http200||!first.nonFlat||!second?.http200||!second.nonFlat||errors.length)
+    process.exitCode=1;
 }catch(error){report.result='TEST_ERROR';report.failure=String(error);process.exitCode=1;}
 finally{
   report.caution='Only real original SWF requests count. A missed hotspot is inconclusive; no full gameplay or iPhone Safari certification.';
