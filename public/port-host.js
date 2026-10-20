@@ -53,7 +53,7 @@ let verifiedLocalEntries = [];
 let defaultEntry = null;
 function validOriginalPath(path) {
   return typeof path === 'string' &&
-    /^\/original\/[a-zA-Z0-9_./-]+\.swf$/i.test(path) &&
+    /^\/original\/[a-zA-Z0-9_./ -]+\.swf$/i.test(path) &&
     !path.split('/').includes('..') && !path.split('/').includes('.');
 }
 async function loadInventory() {
