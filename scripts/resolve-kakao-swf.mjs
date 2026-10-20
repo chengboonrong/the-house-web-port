@@ -22,10 +22,14 @@ if (pageURL.protocol !== 'https:' || pageURL.hostname !== 'vidkidz.tistory.com' 
   throw new Error('Only public vidkidz.tistory.com numeric article pages are supported');
 }
 if (!/^[\w .-]+\.swf$/i.test(filename)) throw new Error('Invalid SWF filename');
-const response = await fetch(pageURL, {
+let response;
+try { response = await fetch(pageURL, {
   headers: { Accept: 'text/html,application/xhtml+xml' },
   redirect: 'error', signal: AbortSignal.timeout(12000)
-});
+}); } catch (error) {
+  const cause = error?.cause?.code || error?.code || error?.name || 'NETWORK_ERROR';
+  throw new Error('Article network failure (' + cause + '); DNS/TLS/timeout is not an HTTP status', {cause:error});
+}
 if (!response.ok) throw new Error('Article response HTTP ' + response.status);
 const html = await response.text();
 const matches = extractKakaoSwfs(html, filename);
@@ -40,12 +44,17 @@ const output = {
   binaryVerified: false,
   note: 'Metadata only; signed query parameters not recorded.'
 };
-if (!download) { console.log(JSON.stringify(output,null,2)); process.exit(0); }
+if (!download) { console.log(JSON.stringify({...output, status: output.expired ? 'EXPIRED_SIGNED_URL' : 'UNVERIFIED_LINK'},null,2)); if(output.expired) process.exitCode = 3; } else {
 if (output.expired) throw new Error('Public article exposes only an expired signed link; no bypass attempted.');
 const target = resolve('research-private', filename);
 try { await lstat(target); throw new Error('Refusing to overwrite existing private SWF'); }
 catch (e) { if (e?.code !== 'ENOENT') throw e; }
-const swfResponse = await fetch(candidate.url, {redirect:'error',signal:AbortSignal.timeout(20000)});
+let swfResponse;
+try { swfResponse = await fetch(candidate.url, {redirect:'error',signal:AbortSignal.timeout(20000)}); }
+catch(error) {
+  const cause = error?.cause?.code || error?.code || error?.name || 'NETWORK_ERROR';
+  throw new Error('CDN network failure (' + cause + '); no HTTP response received', {cause:error});
+}
 if (!swfResponse.ok) throw new Error('Attachment HTTP ' + swfResponse.status);
 const reported = Number(swfResponse.headers.get('content-length') ?? 0);
 if (reported > 8_000_000) throw new Error('Attachment exceeds 8 MiB cap');
@@ -57,3 +66,5 @@ await mkdir(resolve('research-private'), {recursive:true});
 await writeFile(target,bytes,{flag:'wx'});
 console.log(JSON.stringify({...output,binaryVerified:true,privatePath:target,bytes:bytes.length,
   sha256:createHash('sha256').update(bytes).digest('hex')},null,2));
+
+}
