@@ -39,7 +39,9 @@ try{
  const roomScreenshot=PNG.sync.read(await page.locator('#stage').screenshot());
  const roomColors=new Set();for(let i=0;i<roomScreenshot.data.length;i+=16)roomColors.add((roomScreenshot.data[i]<<16)|(roomScreenshot.data[i+1]<<8)|roomScreenshot.data[i+2]);
  const roomResourceSucceeded=resources.some(r=>r.path==='/original/Dining%20room.swf'&&r.status===200);
- if(roomStatus.includes('failed')||!roomResourceSucceeded||roomColors.size<12)process.exitCode=1;
+ if(roomStatus.includes('failed')||!roomResourceSucceeded||roomColors.size<12 || !titleMetadata || !roomMetadata ||
+   titleMetadata.width!==800 || titleMetadata.height!==515 || roomMetadata.width!==600 || roomMetadata.height!==600 ||
+   titleMetadata.isActionScript3!==false || roomMetadata.isActionScript3!==false || errors.length>0)process.exitCode=1;
  result={
    format:'the-house-original-ruffle-chromium-smoke-v1',
    status,hasPlayer,runtime,titleMetadata,
