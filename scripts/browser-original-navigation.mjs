@@ -24,7 +24,34 @@ try{
  let matching=[];
  let clicks=0;
  const wanted=/^\/original\/(?:Bathroom|Kitchen|Living%20room|Dining%20room|Credit)\.swf$/i;
- outer:for(let iy=0;iy<12;iy++){
+ // Coordinates derived from ORIGINAL Corridor.swf PlaceObject2 button
+ // translation origins, NOT invented UI hotspots. Hit rectangles still vary.
+ const anchorX=[13.25,144.5,259.65,364.45];
+ const anchorY=585.25;
+ report.probeStrategy='original-button-placement-bottom-edge-then-grid';
+ report.placementOrigins=anchorX.map(x=>[x,anchorY]);
+ for(const sx of anchorX){
+   for(const dx of [6,20,44,75]){
+     for(const dy of [-3,4,10]){
+       const rect=await node.boundingBox();
+       if(!rect)throw new Error('Stage unavailable');
+       const px=Math.round(rect.x+rect.width*(sx+dx)/600);
+       const py=Math.round(rect.y+rect.height*(anchorY+dy)/600);
+       await page.mouse.click(px,py,{delay:35});
+       clicks++;
+       await page.waitForTimeout(140);
+       matching=responses.filter(x=>wanted.test(x.path));
+       if(matching.length){
+         report.firstMatchingClick={strategy:'static-placement-probe',anchorX:sx,offsetX:dx,offsetY:dy,pixelX:px,pixelY:py,request:matching[0]};
+         break;
+       }
+     }
+     if(matching.length)break;
+   }
+   if(matching.length)break;
+ }
+
+ outer:for(let iy=0;iy<12 && !matching.length;iy++){
    for(let ix=0;ix<12;ix++){
      const rect=await node.boundingBox();
      if(!rect)throw new Error('Stage unavailable');
