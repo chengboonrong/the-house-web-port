@@ -6,6 +6,7 @@ on:
       - "scripts/audit-flashpoint-gamezip.py"
       - "scripts/inspect-archive-original-swf.py"
       - "scripts/inspect-avm1-navigation.py"
+      - "scripts/stage-original-gamezip.py"
   workflow_dispatch:
 jobs:
   inspect-original:
@@ -29,6 +30,8 @@ jobs:
           cat original-swf-references.json
           python scripts/inspect-avm1-navigation.py /tmp/the-house-2005-flashpoint.zip > avm1-navigation.json
           cat avm1-navigation.json
+          python scripts/stage-original-gamezip.py /tmp/the-house-2005-flashpoint.zip --dest /tmp/the-house-original-stage
+          python -c 'import json; from pathlib import Path; p=Path("/tmp/the-house-original-stage"); m=json.loads((p/"port-manifest.json").read_text()); i=json.loads((p/"inventory.json").read_text()); assert m["entry"]=="/original/Title.swf"; assert len(i["files"])>=7; assert all((p/f["path"]).exists() for f in i["files"]); print("Verified original staging, entrypoint and",len(i["files"]),"local files")'
       - name: Save metadata and hashes ONLY
         if: success()
         uses: actions/upload-artifact@v4
