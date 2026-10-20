@@ -33,3 +33,15 @@ The opt-in download:
 Some public Tistory attachment anchors display a filename such as `Diningroom.swf` but use an opaque Kakao CDN path that **does not end in `.swf`**. The resolver now reads the anchor's download attribute or visible filename and associates it with the corresponding HTTPS `blog.kakaocdn.net` URL. Signed query parameters are never printed in diagnostic output.
 
 This corrects a potential false negative in earlier versions of the resolver. A matched link is still only a link: only after an authorized, successful private download, SWF signature validation, and SHA-256 hashing can we report verified binary bytes. The tool does not bypass access controls or re-sign expired links.
+
+## Offline saved-page analysis (no network required)
+
+If `vidkidz.tistory.com` cannot be resolved from the analysis machine, save the public article as HTML on a machine that can access it. Move only the saved **HTML** to the research machine (avoid preserving session credentials). Then:
+
+```bash
+node scripts/resolve-kakao-swf.mjs \
+  https://vidkidz.tistory.com/541 Diningroom.swf \
+  --html /path/to/saved-541.html
+```
+
+This reads the saved file without making network requests, identifies the matching Kakao link and expiry, and emits `source: SAVED_HTML_UNVERIFIED`. An expired link is reported as `EXPIRED_SIGNED_URL` with exit code 3. The command refuses `--html` and `--download` together, because a cached signed URL is not adequate provenance for a fresh download. A local HTML attachment link is **not** proof that the game SWF was downloaded or playable.
