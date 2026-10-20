@@ -18,7 +18,7 @@ if (!sourceArg || !entryArg) {
 const source = resolve(sourceArg);
 const dest = resolve('public/original');
 const entry = entryArg.replaceAll('\\', '/');
-if (!/^[a-zA-Z0-9_.\/-]+\.swf$/i.test(entry) || entry.split('/').some(x => x === '..' || x === '.' || !x)) {
+if (!/^[a-zA-Z0-9_.\/ -]+\.swf$/i.test(entry) || entry.split('/').some(x => x === '..' || x === '.' || !x)) {
   throw new Error('Invalid relative SWF entry path');
 }
 const srcInfo = await lstat(source);
