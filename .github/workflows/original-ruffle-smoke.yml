@@ -4,6 +4,7 @@ on:
     paths:
       - ".github/workflows/original-ruffle-smoke.yml"
       - "scripts/browser-original-smoke.mjs"
+      - "scripts/browser-original-navigation.mjs"
       - "scripts/probe-original-clicks.mjs"
       - "public/port-host.js"
       - "scripts/stage-original-gamezip.py"
@@ -49,6 +50,8 @@ jobs:
         run: node scripts/browser-original-smoke.mjs
       - name: Probe original Dining Room mouse navigation
         run: node scripts/probe-original-clicks.mjs
+      - name: Exercise authentic Corridor button navigation
+        run: node scripts/browser-original-navigation.mjs
       - name: Retain metadata report ONLY
         if: always()
         uses: actions/upload-artifact@v4
