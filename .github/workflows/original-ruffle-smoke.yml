@@ -5,6 +5,7 @@ on:
       - ".github/workflows/original-ruffle-smoke.yml"
       - "scripts/browser-original-smoke.mjs"
       - "scripts/browser-original-navigation.mjs"
+      - "scripts/browser-original-audio-probe.mjs"
       - "scripts/probe-original-clicks.mjs"
       - "public/port-host.js"
       - "scripts/stage-original-gamezip.py"
@@ -57,6 +58,8 @@ jobs:
           CAPTURE_PREVIEWS: '1'
         continue-on-error: true
         run: node scripts/browser-original-navigation.mjs
+      - name: Observe real Ruffle WebAudio initialization and gesture behavior
+        run: node scripts/browser-original-audio-probe.mjs
       - name: Provide short-lived original game screenshot previews
         if: always()
         uses: actions/upload-artifact@v4
@@ -74,5 +77,6 @@ jobs:
             ruffle-smoke-metadata.json
             original-click-metadata.json
             ruffle-navigation-metadata.json
+            original-audio-observation.json
           if-no-files-found: warn
           retention-days: 7
