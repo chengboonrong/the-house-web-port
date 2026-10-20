@@ -1,6 +1,7 @@
 import {chromium} from 'playwright';
 import {writeFile,mkdir} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
+import {PNG} from 'pngjs';
 
 const browser=await chromium.launch({headless:true,env:{...process.env,LANG:'en_US.UTF-8',LC_ALL:'en_US.UTF-8'},args:['--use-gl=angle','--use-angle=swiftshader']});
 const page=await browser.newPage({viewport:{width:960,height:840},locale:'en-US'});
@@ -77,8 +78,30 @@ try{
      if(page.isClosed())throw new Error('Browser page unexpectedly closed');
    }
  }
- await page.waitForTimeout(1500);
- if(process.env.CAPTURE_PREVIEWS==='1' && matching.some(x=>x.status===200))await page.locator('#stage').screenshot({path:'research-screenshots/04-after-click.png'});
+ // Record multiple post-transition frames, not just one arbitrary black frame.
+ // No game interaction is injected; original AVM1 _level0 loading does the work.
+ const afterFrames=[];
+ for(const delay of [500,1800,4200]){
+   await page.waitForTimeout(delay);
+   const screenshot=await node.screenshot();
+   const png=PNG.sync.read(screenshot);
+   const colors=new Set();
+   let bright=0, samples=0;
+   for(let i=0;i<png.data.length;i+=16){
+     const r=png.data[i],g=png.data[i+1],b=png.data[i+2];
+     colors.add((r<<16)|(g<<8)|b);samples++;
+     if(Math.max(r,g,b)>35)bright++;
+   }
+   const frame={elapsedWaitMs:afterFrames.reduce((acc,f)=>acc+f.delayMs,0)+delay,
+      delayMs:delay,hash:imageHash(screenshot),uniqueColors:colors.size,
+      brightRatio:Math.round(bright/samples*10000)/10000,movie:await metadata()};
+   afterFrames.push(frame);
+   if(process.env.CAPTURE_PREVIEWS==='1' && matching.some(x=>x.status===200)){
+      await mkdir('research-screenshots',{recursive:true});
+      await writeFile('research-screenshots/04-after-click-'+frame.elapsedWaitMs+'ms.png',screenshot);
+   }
+ }
+ report.afterFrames=afterFrames;
  const afterImage=await node.screenshot();
  const afterMovie=await metadata();
  report.visualEvidence={
@@ -86,6 +109,8 @@ try{
    afterScreenshotSHA256:imageHash(afterImage),
    changed:imageHash(beforeImage)!==imageHash(afterImage),
    beforeMovie,afterMovie,
+   distinctPostClickFrames:new Set(afterFrames.map(f=>f.hash)).size,
+   anyNonFlatPostClickFrame:afterFrames.some(f=>f.uniqueColors>30),
    caution:'Animation may change pixels even without navigation; images are not retained.'
  };
  report.result=matching.some(x=>x.status===200)?'ROOM_REQUEST_SUCCEEDED':matching.length?'ROOM_REQUEST_FAILED':'NO_NAVIGATION_OBSERVED';
