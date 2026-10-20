@@ -18,6 +18,7 @@ try{
  await page.locator('#staged').click();
  await page.waitForTimeout(8000);
  const status=await page.locator('#status').innerText();
+ const runtime=await page.evaluate(()=>{const p=document.querySelector('#stage ruffle-player');return {language:navigator.language,languages:navigator.languages,playerTag:p?.tagName,playerConstructor:p?.constructor?.name,customElementRegistered:Boolean(customElements.get('ruffle-player')),ruffleType:typeof p?.ruffle,loadType:typeof p?.load,playerProto:Object.getOwnPropertyNames(Object.getPrototypeOf(p??document.body)).slice(0,35),runtimeAPI:typeof window.RufflePlayer?.newest};});
  const hasPlayer=await page.locator('#stage ruffle-player').count()>0;
  const buffer=await page.locator('#stage').screenshot();
  const png=PNG.sync.read(buffer);
@@ -28,9 +29,10 @@ try{
    total++;
    if(Math.max(r,g,b)>35)notBlack++;
  }
+ if(status.includes('failed')||status.includes('unavailable')||!hasPlayer)process.exitCode=1;
  result={
    format:'the-house-original-ruffle-chromium-smoke-v1',
-   status,hasPlayer,
+   status,hasPlayer,runtime,
    screenshotSHA256:createHash('sha256').update(buffer).digest('hex'),
    screenshotSize:{width:png.width,height:png.height},
    sampledUniqueColors:distinct.size,
