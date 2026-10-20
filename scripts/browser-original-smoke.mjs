@@ -4,8 +4,8 @@ import {createHash} from 'node:crypto';
 import {writeFile} from 'node:fs/promises';
 
 const url=process.env.RESEARCH_URL || 'http://127.0.0.1:5173/port.html';
-const browser=await chromium.launch({headless:true,args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl']});
-const page=await browser.newPage({viewport:{width:960,height:760},deviceScaleFactor:1});
+const browser=await chromium.launch({headless:true,env:{...process.env,LANG:'en_US.UTF-8',LC_ALL:'en_US.UTF-8'},args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl']});
+const page=await browser.newPage({viewport:{width:960,height:760},deviceScaleFactor:1,locale:'en-US'});
 const errors=[],resources=[];
 page.on('pageerror',e=>errors.push(String(e).slice(0,300)));
 page.on('console',m=>{if(m.type()==='error'&&errors.length<50)errors.push(m.text().slice(0,300));});
