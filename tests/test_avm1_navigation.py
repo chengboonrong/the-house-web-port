@@ -25,9 +25,9 @@ class Avm1Tests(unittest.TestCase):
 
     def test_button2_click_action_extracts_navigation(self):
         # Synthetic DefineButton2: ID 22, ActionOffset 3, one cond action.
-        action = b"\\x83" + struct.pack("<H", len(b"Bathroom.swf\\0\\0")) + b"Bathroom.swf\\0\\0" + b"\\0"
+        action = b"\x83" + struct.pack("<H", len(b"Bathroom.swf\0\0")) + b"Bathroom.swf\0\0" + b"\0"
         condition = struct.pack("<HH",0,0x0004) + action
-        payload = struct.pack("<HBH",22,0,3) + b"\\0" + condition
+        payload = struct.pack("<HBH",22,0,3) + b"\0" + condition
         header = struct.pack("<H",(34 << 6) | 63) + struct.pack("<I",len(payload))
         signals={"opcodes":mod.Counter(),"events":[],"filenameIndicators":set(),"errors":[],"buttonConditions":0}
         mod.walk_tags(header+payload,0,len(header+payload),signals)
