@@ -43,3 +43,16 @@ The smoke test now fails if any original file fails to load, expected source met
 - Redistribution authorization for original game assets remains unresolved.
 
 The game is finally rendering under Ruffle in Chromium; it is **not yet a fully verified iPhone Safari port**.
+
+## Native stage geometry verified in the actual browser
+
+The research host no longer imposes its old fixed 4:3 aspect ratio on all SWFs. Its `synchronizeNativeStage` function uses actual Ruffle movie metadata and sets the player's container aspect ratio automatically.
+
+A regression run with the **real 2005 original** verified the dynamic DOM aspect ratios:
+
+- `Title.swf` → `800 / 515`
+- `Dining room.swf` → `600 / 600`
+
+The browser check now fails when either stage ratio, source metadata, HTTP status, rendered color count or the browser error check is wrong. The actual image pixels and original SWF assets remain unshared. Evidence: https://github.com/chengboonrong/the-house-web-port/actions/runs/39372141643
+
+This remains a **direct-file smoke test**, not an automated click-through of the game's native `GetURL('_level0')` links. No iPhone Safari claim is made.
