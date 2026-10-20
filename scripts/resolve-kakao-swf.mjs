@@ -5,7 +5,7 @@
  * By default prints redacted metadata. --download privately saves matching SWF.
  * No bypass of signed links, access controls, or authentication.
  */
-import { mkdir, writeFile, lstat } from 'node:fs/promises';
+import { mkdir, writeFile, lstat, readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
 import { extractKakaoSwfs, redactedAttachment } from './lib/kakao-attachments.mjs';
@@ -13,6 +13,10 @@ import { extractKakaoSwfs, redactedAttachment } from './lib/kakao-attachments.mj
 const article = process.argv[2];
 const filename = process.argv[3];
 const download = process.argv.includes('--download');
+const offlineIndex = process.argv.indexOf('--html');
+const offlineHtmlPath = offlineIndex >= 0 ? process.argv[offlineIndex + 1] : null;
+if (offlineIndex >= 0 && (!offlineHtmlPath || offlineHtmlPath.startsWith('--'))) throw new Error('--html requires a saved local HTML file');
+if (offlineHtmlPath && download) throw new Error('Offline HTML mode is metadata-only; signed attachment downloads require a freshly fetched public page');
 if (!article || !filename) {
   console.error('Usage: node scripts/resolve-kakao-swf.mjs https://vidkidz.tistory.com/541 Diningroom.swf [--download]');
   process.exit(2);
@@ -22,16 +26,25 @@ if (pageURL.protocol !== 'https:' || pageURL.hostname !== 'vidkidz.tistory.com' 
   throw new Error('Only public vidkidz.tistory.com numeric article pages are supported');
 }
 if (!/^[\w .-]+\.swf$/i.test(filename)) throw new Error('Invalid SWF filename');
-let response;
-try { response = await fetch(pageURL, {
-  headers: { Accept: 'text/html,application/xhtml+xml' },
-  redirect: 'error', signal: AbortSignal.timeout(12000)
-}); } catch (error) {
-  const cause = error?.cause?.code || error?.code || error?.name || 'NETWORK_ERROR';
-  throw new Error('Article network failure (' + cause + '); DNS/TLS/timeout is not an HTTP status', {cause:error});
+let html;
+if (offlineHtmlPath) {
+  html = await readFile(offlineHtmlPath, 'utf8');
+  if (html.length > 8_000_000) throw new Error('Saved HTML exceeds 8 MB scan limit');
+} else {
+  let response;
+  try {
+    response = await fetch(pageURL, {
+      headers: { Accept: 'text/html,application/xhtml+xml' },
+      redirect: 'error', signal: AbortSignal.timeout(12000)
+    });
+  } catch (error) {
+    const cause = error?.cause?.code || error?.code || error?.name || 'NETWORK_ERROR';
+    throw new Error('Article network failure (' + cause + '); DNS/TLS/timeout is not an HTTP status');
+  }
+  if (!response.ok) throw new Error('Article response HTTP ' + response.status);
+  html = await response.text();
+  if (html.length > 8_000_000) throw new Error('Article exceeds 8 MB scan limit');
 }
-if (!response.ok) throw new Error('Article response HTTP ' + response.status);
-const html = await response.text();
 const matches = extractKakaoSwfs(html, filename);
 if (!matches.length) throw new Error('No matching public attachment URL in live article HTML');
 const candidate = matches.find(x => x.expiresAt === null || x.expiresAt > Date.now()) ?? matches[0];
@@ -42,7 +55,8 @@ const output = {
   expiresAt: metadata.expiresAt, expired: metadata.expired,
   hasTemporarySignature: metadata.hasTemporarySignature,
   binaryVerified: false,
-  note: 'Metadata only; signed query parameters not recorded.'
+  source: offlineHtmlPath ? 'SAVED_HTML_UNVERIFIED' : 'LIVE_ARTICLE',
+  note: 'Metadata only; signed query parameters not recorded. Saved HTML may contain expired or cached URLs.'
 };
 if (!download) { console.log(JSON.stringify({...output, status: output.expired ? 'EXPIRED_SIGNED_URL' : 'UNVERIFIED_LINK'},null,2)); if(output.expired) process.exitCode = 3; } else {
 if (output.expired) throw new Error('Public article exposes only an expired signed link; no bypass attempted.');
