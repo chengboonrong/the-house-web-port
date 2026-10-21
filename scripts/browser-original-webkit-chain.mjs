@@ -1,6 +1,7 @@
 import {webkit} from 'playwright';
 import {PNG} from 'pngjs';
 import {writeFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
 
 /** Real original-game, original-button, same-player chain investigation.
  * Corridor -> Kitchen -> Bathroom -> Dining Room via verified AVM1 GetURL(_level0).
@@ -9,7 +10,8 @@ import {writeFile} from 'node:fs/promises';
 const browser=await webkit.launch({headless:true,env:{...process.env,LANG:'en_US.UTF-8',LC_ALL:'en_US.UTF-8'}});
 const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:2,
   hasTouch:true,isMobile:true,locale:'en-US'});
-const responses=[],errors=[];
+const responses=[],errors=[],failedRequests=[];
+page.on('requestfailed',r=>{if(new URL(r.url()).pathname.startsWith('/original/'))failedRequests.push({path:new URL(r.url()).pathname,reason:r.failure()?.errorText??'unknown'});});
 page.on('pageerror',e=>errors.push(String(e).slice(0,300)));
 page.on('response',r=>{
   const p=new URL(r.url()).pathname;
@@ -33,7 +35,7 @@ async function renderStatus(){
   const pixels=new Set();
   for(let i=0;i<png.data.length;i+=16)
     pixels.add((png.data[i]<<16)|(png.data[i+1]<<8)|png.data[i+2]);
-  return {sampleColors:pixels.size,player:await page.evaluate(()=>{
+  return {sampleColors:pixels.size,frameSHA256:createHash('sha256').update(png.data).digest('hex'),player:await page.evaluate(()=>{
     const p=document.querySelector('#stage ruffle-player');
     return {exists:!!p,readyState:p?.readyState??null,isPlaying:p?.isPlaying??null};
   })};
@@ -63,6 +65,7 @@ try{
   ];
   for(const step of plan){
     const previous=responses.filter(r=>r.path===step.path).length;
+    const clickClock=Date.now();
     const record={from:step.source,to:step.destination,attempts:0,requested:false,http200:false};
     for(const [x,y] of step.buttons){
       await stagePoint(x,y);
@@ -72,6 +75,7 @@ try{
         record.requested=true;
         record.http200=hasResponse(step.path);
         record.hit={stageX:x,stageY:y};
+        record.requestObservedWithinMs=Date.now()-clickClock;
         break;
       }
     }
@@ -79,6 +83,9 @@ try{
       await page.waitForTimeout(7400);
       record.postTransition=await renderStatus();
       record.nonFlat=record.postTransition.sampleColors>30;
+      await page.waitForTimeout(1000);
+      record.laterFrame=await renderStatus();
+      record.stillNonFlatAfterOneSecond=record.laterFrame.sampleColors>30;
       record.samePlayerConnected=await originalPlayer.evaluate(el=>el.isConnected).catch(()=>false);
       record.hostPath=new URL(page.url()).pathname;
       record.hostReloads=hostPageNavigations-navigationBaseline;
@@ -92,10 +99,12 @@ try{
     first?.http200&&first.nonFlat?'FIRST_TRANSITION_ONLY':
     'FIRST_TRANSITION_NOT_CONFIRMED';
   report.hostPageNavigations=hostPageNavigations-navigationBaseline;
+  report.failedOriginalRequests=failedRequests;
   // Three unmodified original navigation transitions are now verified.
   // Fail CI if any request, recovery or stable playback regresses.
   if(report.result!=='THREE_ORIGINAL_ROOM_TRANSITIONS_RENDERED'||errors.length||
-     report.steps.some(step=>!step.postTransition?.player?.isPlaying ||
+     failedRequests.length || report.steps.some(step=>!step.postTransition?.player?.isPlaying ||
+       !step.stillNonFlatAfterOneSecond || !step.laterFrame?.player?.isPlaying ||
        !step.samePlayerConnected || step.hostPath!=='/port.html' || step.hostReloads!==0))
     process.exitCode=1;
 }catch(error){report.result='TEST_ERROR';report.failure=String(error);process.exitCode=1;}
