@@ -31,3 +31,19 @@ A frame changing by itself is not proof of intended horror animation playback. E
 - Rights clearance before any public release of the original game assets.
 
 The test is Linux WebKit, **not physical iOS Safari**.
+
+## Passive Dining Room endurance regression (2026-10-21)
+
+After the third original transition, the WebKit chain test additionally samples
+four frames at three-second intervals (approximately 12 seconds). Each sample
+records pixel diversity, frame hash, Ruffle playback status, whether the
+original player is still connected, host path and navigation count, and any
+failed original requests or page errors. The test fails if playback stops,
+the scene becomes flat, the player is detached, the host navigates, or
+original requests/errors fail.
+
+This is an **endurance test**, not proof of a successful original puzzle,
+horror event, animation progression, or audible soundtrack. Different frame
+hashes are only observations and must not be treated as event verification.
+Next genuine gameplay validation requires locating original SWF button/action
+provenance and then checking a specific real event against browser evidence.
