@@ -47,3 +47,18 @@ horror event, animation progression, or audible soundtrack. Different frame
 hashes are only observations and must not be treated as event verification.
 Next genuine gameplay validation requires locating original SWF button/action
 provenance and then checking a specific real event against browser evidence.
+
+## Bounded render-recovery diagnostics (2026-10-22)
+
+The original three-hop WebKit test now records metadata-only stage snapshots at
+1.2, 3.0 and 7.4 seconds after observing each destination SWF response.
+It reports the first sampled non-flat frame as a **bounded observation**, not
+an exact recovery time, and preserves the established 7.4-second regression
+checkpoint and later one-second stability assertion. The screenshots are kept
+in memory only; diagnostic JSON contains aggregate color counts and hashes.
+
+**Interpretation:** a non-flat frame can reflect a loader, menu or ordinary room
+artwork. It is *not* evidence of puzzle progress, a jumpscare or correct audio.
+No speculative hotspot is tapped or game state injected. A deterministic puzzle
+regression still requires verified AVM1 action provenance, timeline visibility,
+and a reproducible authentic input sequence.
