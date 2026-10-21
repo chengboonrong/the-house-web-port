@@ -80,7 +80,19 @@ try{
       }
     }
     if(record.http200){
-      await page.waitForTimeout(7400);
+      // Diagnostic recovery sampling: keep the established 7.4 s regression
+      // deadline unchanged. Early snapshots do NOT certify a puzzle/event.
+      record.recoverySamples=[];
+      let elapsed=0;
+      for(const checkpoint of [1200,3000,7400]){
+        await page.waitForTimeout(checkpoint-elapsed);
+        elapsed=checkpoint;
+        const frame=await renderStatus();
+        record.recoverySamples.push({elapsedAfterRequestMs:checkpoint,
+          sampleColors:frame.sampleColors,frameSHA256:frame.frameSHA256,
+          isPlaying:frame.player.isPlaying,nonFlat:frame.sampleColors>30});
+      }
+      record.firstObservedNonFlatAfterRequestMs=record.recoverySamples.find(s=>s.nonFlat)?.elapsedAfterRequestMs??null;
       record.postTransition=await renderStatus();
       record.nonFlat=record.postTransition.sampleColors>30;
       await page.waitForTimeout(1000);
