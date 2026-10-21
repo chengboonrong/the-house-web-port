@@ -5,6 +5,7 @@ on:
       - ".github/workflows/original-webkit-probe.yml"
       - "scripts/browser-original-webkit-probe.mjs"
       - "scripts/browser-original-webkit-chain.mjs"
+      - "scripts/inspect-original-button-placements.py"
       - "public/port-host.js"
       - "scripts/stage-original-gamezip.py"
   workflow_dispatch:
@@ -35,6 +36,20 @@ jobs:
             -o /tmp/the-house-original.zip
           python3 scripts/stage-original-gamezip.py /tmp/the-house-original.zip
           node scripts/check-staged-assets.mjs
+      - name: Validate original DefineButton2 metadata privately
+        run: |
+          python3 scripts/inspect-original-button-placements.py /tmp/the-house-original.zip > /tmp/house-button-metadata.json
+          python3 - <<'PY'
+          import json
+          with open('/tmp/house-button-metadata.json') as stream:
+              report=json.load(stream)
+          rooms=[f for f in report['files'] if f['file'].lower()=='dining room.swf']
+          assert len(rooms)==1, 'Dining Room original not found'
+          buttons=rooms[0]['buttonActionMetadata']
+          assert buttons, 'Dining Room has no parsed DefineButton2 definitions'
+          assert all(isinstance(b['hasConditionalActions'],bool) for b in buttons)
+          print('Original Dining Room DefineButton2 metadata parsed:',len(buttons),'buttons')
+          PY
       - name: Start localhost research host
         run: |
           npm run dev > /tmp/the-house-vite.log 2>&1 &
