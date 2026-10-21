@@ -61,6 +61,7 @@ def frame_start(data):
 
 def inspect_one(data):
     button_ids=set()
+    button_action_metadata={}
     sprite_ids=set()
     placed=[]
     def scan(start,end,container,depth):
@@ -77,8 +78,16 @@ def inspect_one(data):
                 length=struct.unpack_from("<I",data,pos)[0];pos+=4
             stop=pos+length
             if stop>end:break
-            if code==34 and length>=2:
-                button_ids.add(struct.unpack_from("<H",data,pos)[0])
+            if code==34 and length>=5:
+                button_id=struct.unpack_from("<H",data,pos)[0]
+                action_offset=struct.unpack_from("<H",data,pos+3)[0]
+                button_ids.add(button_id)
+                button_action_metadata[button_id]={
+                    "characterId":button_id,
+                    "hasConditionalActions":action_offset!=0,
+                    "actionOffset":action_offset,
+                    "note":"ActionOffset is relative SWF metadata, not a click point or proof of reachable game state."
+                }
             elif code==39 and length>=4:
                 sprite=struct.unpack_from("<H",data,pos)[0]
                 sprite_ids.add(sprite)
@@ -116,7 +125,9 @@ def inspect_one(data):
     for x in sprite_instances:
         key=(x["container"],x["characterId"],x["depth"],tuple(x["originPx"]))
         sprite_unique[key]=x
-    return {"buttonDefinitionCount":len(button_ids),"buttonPlacementCount":len(buttons),
+    return {"buttonDefinitionCount":len(button_ids),
+            "buttonActionMetadata":sorted(button_action_metadata.values(),key=lambda b:b["characterId"]),
+            "buttonPlacementCount":len(buttons),
             "spriteDefinitionCount":len(sprite_ids),
             "placedSpriteInstances":list(sprite_unique.values())[:200],
             "placedButtons":list(unique.values())[:200],
