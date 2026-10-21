@@ -98,11 +98,40 @@ try{
     second?.http200&&second.nonFlat?'TWO_ORIGINAL_ROOM_TRANSITIONS_RENDERED':
     first?.http200&&first.nonFlat?'FIRST_TRANSITION_ONLY':
     'FIRST_TRANSITION_NOT_CONFIRMED';
+  // Passive original Dining Room endurance probe. No injected AVM1 state or
+  // speculative puzzle clicks; this verifies runtime continuity only.
+  if(report.result==='THREE_ORIGINAL_ROOM_TRANSITIONS_RENDERED'){
+    const samples=[];
+    const enduranceStart=Date.now();
+    for(let i=0;i<4;i++){
+      await page.waitForTimeout(3000);
+      const frame=await renderStatus();
+      samples.push({
+        elapsedMs:Date.now()-enduranceStart,
+        sampleColors:frame.sampleColors,
+        frameSHA256:frame.frameSHA256,
+        playerRunning:frame.player.isPlaying,
+        playerConnected:await originalPlayer.evaluate(el=>el.isConnected).catch(()=>false),
+        hostPath:new URL(page.url()).pathname,
+        reloads:hostPageNavigations-navigationBaseline,
+        failedOriginalRequests:failedRequests.length,
+        pageErrors:errors.length
+      });
+    }
+    report.diningRoomEndurance={
+      mode:'passive observation of unmodified original SWF; not puzzle or jumpscare certification',
+      samples,
+      passed:samples.every(s=>s.sampleColors>30 && s.playerRunning &&
+        s.playerConnected && s.hostPath==='/port.html' &&
+        s.reloads===0 && s.failedOriginalRequests===0 && s.pageErrors===0)
+    };
+  }
   report.hostPageNavigations=hostPageNavigations-navigationBaseline;
   report.failedOriginalRequests=failedRequests;
   // Three unmodified original navigation transitions are now verified.
   // Fail CI if any request, recovery or stable playback regresses.
-  if(report.result!=='THREE_ORIGINAL_ROOM_TRANSITIONS_RENDERED'||errors.length||
+  if(report.result!=='THREE_ORIGINAL_ROOM_TRANSITIONS_RENDERED'||
+     !report.diningRoomEndurance?.passed||errors.length||
      failedRequests.length || report.steps.some(step=>!step.postTransition?.player?.isPlaying ||
        !step.stillNonFlatAfterOneSecond || !step.laterFrame?.player?.isPlaying ||
        !step.samePlayerConnected || step.hostPath!=='/port.html' || step.hostReloads!==0))
