@@ -4,6 +4,16 @@ const status = document.querySelector('#status');
 const input = document.querySelector('#file');
 let current = null;
 const note = message => { status.textContent = message; };
+// Ruffle 0.7.1 fires an AVM1 on(rollOver) only for a pointermove made while
+// no button is down. A touch tap starts with pointerdown, so Ruffle treats the
+// hover as a drag and the rollOver never runs (the Dining Room needs one).
+// Hover at the touch point first, as a mouse would, then let the tap through.
+stage.addEventListener('pointerdown', event => {
+  if (event.pointerType === 'mouse' || !event.isTrusted) return;
+  event.composedPath()[0].dispatchEvent(new PointerEvent('pointermove', {
+    bubbles: true, composed: true, clientX: event.clientX, clientY: event.clientY,
+    pointerId: event.pointerId, pointerType: event.pointerType, isPrimary: event.isPrimary}));
+}, true);
 async function requireRuffle() {
   if (!window.RufflePlayer?.newest) {
     note('Ruffle runtime is missing. Install the official self-hosted distribution under public/ruffle/ (see docs/original-port-host.md).');
@@ -104,7 +114,11 @@ async function loadInventory() {
 async function loadStagedEntry(entry) {
   if (!verifiedLocalEntries.includes(entry)) throw new Error('SWF is not listed in local staged inventory');
   const base = entry.slice(0, entry.lastIndexOf('/') + 1);
-  await mount({url:entry, base, allowScriptAccess:false});
+  // Title.swf and Dining room.swf set Stage.scaleMode = "noScale". Sinthai's
+  // rooms.html embedded the 600x600 rooms at native size, where that was
+  // invisible; in a smaller phone player it crops the room and its buttons.
+  // forceScale keeps Ruffle's default showAll without touching the SWF.
+  await mount({url:entry, base, allowScriptAccess:false, forceScale:true});
 }
 document.querySelector('#staged').addEventListener('click', async () => {
   try {
