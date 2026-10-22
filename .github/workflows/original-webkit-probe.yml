@@ -49,6 +49,12 @@ jobs:
           assert buttons, 'Dining Room has no parsed DefineButton2 definitions'
           assert all(isinstance(b['hasConditionalActions'],bool) for b in buttons)
           print('Original Dining Room DefineButton2 metadata parsed:',len(buttons),'buttons')
+          [route]=rooms[0]['timelineRoutes']
+          exit=route['exit']
+          assert (exit['button'],exit['getURL'],exit['target'])==(90,'Bathroom.swf','_level0'), exit
+          assert route['steps'][0]['stopFrame']==route['stopFrames'][0], route['steps'][0]
+          print('Original Dining Room route:',len(route['steps']),'button steps in',route['container'],
+                'then button',exit['button'],'on stop frame',exit['stopFrame'],'->',exit['getURL'])
           PY
       - name: Start localhost research host
         run: |
@@ -61,8 +67,8 @@ jobs:
           exit 1
       - name: Run genuine original game in WebKit
         run: node scripts/browser-original-webkit-probe.mjs
-      - name: Explore original Corridor Kitchen Bathroom touch chain
-        run: node scripts/browser-original-webkit-chain.mjs
+      - name: Original room chain and Dining Room puzzle by touch
+        run: node scripts/browser-original-webkit-chain.mjs /tmp/house-button-metadata.json
       - name: Preserve diagnostics only, never game assets
         if: always()
         uses: actions/upload-artifact@v4

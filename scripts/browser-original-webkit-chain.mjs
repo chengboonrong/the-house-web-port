@@ -1,26 +1,31 @@
 import {webkit} from 'playwright';
 import {PNG} from 'pngjs';
-import {writeFile} from 'node:fs/promises';
+import {readFile,writeFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 
 /** Real original-game, original-button, same-player chain investigation.
- * Corridor -> Kitchen -> Bathroom -> Dining Room via verified AVM1 GetURL(_level0).
+ * Corridor -> Kitchen -> Bathroom -> Dining Room via verified AVM1 GetURL(_level0),
+ * then the Dining Room puzzle by tapping, in order, the original buttons that
+ * inspect-original-button-placements.py derived from sprite 91's timeline.
  * No injected game state, modified bytecode or third-party asset artifacts.
+ * Usage: node scripts/browser-original-webkit-chain.mjs button-metadata.json
  */
+const routePath=process.argv[2];
 const browser=await webkit.launch({headless:true,env:{...process.env,LANG:'en_US.UTF-8',LC_ALL:'en_US.UTF-8'}});
 const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:2,
   hasTouch:true,isMobile:true,locale:'en-US'});
-const responses=[],errors=[],failedRequests=[];
+const responses=[],errors=[],failedRequests=[],requests=[];
 page.on('requestfailed',r=>{if(new URL(r.url()).pathname.startsWith('/original/'))failedRequests.push({path:new URL(r.url()).pathname,reason:r.failure()?.errorText??'unknown'});});
+page.on('request',r=>{const p=new URL(r.url()).pathname;if(p.startsWith('/original/'))requests.push(p);});
 page.on('pageerror',e=>errors.push(String(e).slice(0,300)));
 page.on('response',r=>{
   const p=new URL(r.url()).pathname;
   if(p.startsWith('/original/')&&p.toLowerCase().endsWith('.swf'))
     responses.push({path:p,status:r.status()});
 });
-const report={format:'original-the-house-webkit-three-navigation-chain-v2',
+const report={format:'original-the-house-webkit-three-navigation-chain-v3',
   environment:'Playwright Linux WebKit mobile touch, not physical iOS Safari',
-  goal:'Corridor.swf -> Kitchen.swf -> Bathroom.swf -> Dining room.swf',
+  goal:'Corridor.swf -> Kitchen.swf -> Bathroom.swf -> Dining room.swf, then its puzzle exit to Bathroom.swf',
   steps:[],responses,errors,result:'UNTESTED'};
 let hostPageNavigations=0;
 page.on('framenavigated',frame=>{if(frame===page.mainFrame())hostPageNavigations++;});
@@ -41,6 +46,9 @@ async function renderStatus(){
   })};
 }
 try{
+  const metadata=JSON.parse(await readFile(routePath,'utf8'));
+  const diningRoute=metadata.files.find(f=>f.file==='Dining room.swf')?.timelineRoutes?.[0];
+  if(!diningRoute)throw new Error('Inspector found no original Dining Room button route');
   await page.goto('http://127.0.0.1:5173/port.html',{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>typeof window.RufflePlayer?.newest==='function',{timeout:25000});
   await page.locator('#staged').click();
@@ -138,19 +146,54 @@ try{
         s.reloads===0 && s.failedOriginalRequests===0 && s.pageErrors===0)
     };
   }
+  // Authentic Dining Room puzzle. Button 90, the only Dining Room GetURL to
+  // Bathroom.swf, is placed on sprite 91's last stop frame (461) and nowhere
+  // else, so its request proves the whole original button chain ran.
+  if(report.diningRoomEndurance?.passed){
+    const {steps,exit,fps}=diningRoute;
+    const exitPath='/original/'+encodeURIComponent(exit.getURL);
+    const exitRequests=()=>requests.filter(p=>p===exitPath).length;
+    const puzzle=report.diningRoomPuzzle={container:diningRoute.container,steps:[]};
+    // Control: the exit link's spot before solving, while button 90 is absent.
+    let before=exitRequests();
+    await stagePoint(...exit.tapPx);
+    await page.waitForTimeout(1500);
+    puzzle.control={tapPx:exit.tapPx,exitRequests:exitRequests()-before};
+    for(const step of steps){
+      await stagePoint(...step.tapPx);
+      // Stop frames hold, so waiting long is safe; tapping early is not.
+      await page.waitForTimeout(Math.ceil(step.playFrames*2000/fps)+1000);
+      puzzle.steps.push({stopFrame:step.stopFrame,button:step.button,event:step.event,
+        tapPx:step.tapPx,nextStopFrame:step.nextStopFrame});
+    }
+    before=exitRequests();
+    const responsesBefore=responses.filter(r=>r.path===exitPath).length;
+    await stagePoint(...exit.tapPx);
+    await page.waitForTimeout(3000);
+    const exitResponses=responses.filter(r=>r.path===exitPath).slice(responsesBefore);
+    const frame=await renderStatus();
+    puzzle.exit={stopFrame:exit.stopFrame,button:exit.button,destination:exit.getURL,
+      target:exit.target,exitRequests:exitRequests()-before,
+      statuses:exitResponses.map(r=>r.status),sampleColors:frame.sampleColors,
+      isPlaying:frame.player.isPlaying,
+      samePlayerConnected:await originalPlayer.evaluate(el=>el.isConnected).catch(()=>false)};
+    puzzle.passed=puzzle.control.exitRequests===0&&puzzle.exit.exitRequests>0&&
+      exitResponses.length>0&&exitResponses.every(r=>r.status===200||r.status===304)&&
+      frame.sampleColors>30&&frame.player.isPlaying&&puzzle.exit.samePlayerConnected;
+  }
   report.hostPageNavigations=hostPageNavigations-navigationBaseline;
   report.failedOriginalRequests=failedRequests;
   // Three unmodified original navigation transitions are now verified.
   // Fail CI if any request, recovery or stable playback regresses.
   if(report.result!=='THREE_ORIGINAL_ROOM_TRANSITIONS_RENDERED'||
-     !report.diningRoomEndurance?.passed||errors.length||
+     !report.diningRoomEndurance?.passed||!report.diningRoomPuzzle?.passed||errors.length||
      failedRequests.length || report.steps.some(step=>!step.postTransition?.player?.isPlaying ||
        !step.stillNonFlatAfterOneSecond || !step.laterFrame?.player?.isPlaying ||
        !step.samePlayerConnected || step.hostPath!=='/port.html' || step.hostReloads!==0))
     process.exitCode=1;
 }catch(error){report.result='TEST_ERROR';report.failure=String(error);process.exitCode=1;}
 finally{
-  report.caution='Only real original SWF requests count. A missed hotspot is inconclusive; no full gameplay or iPhone Safari certification.';
+  report.caution='Only real original SWF requests count. The Dining Room route proves one original room puzzle in Linux WebKit touch emulation; no full gameplay, audio or iPhone Safari certification.';
   console.log(JSON.stringify(report,null,2));
   await writeFile('original-webkit-chain.json',JSON.stringify(report,null,2)+'\n');
   await browser.close();
