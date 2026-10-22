@@ -1,0 +1,86 @@
+name: Original Ruffle Browser Smoke
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/original-ruffle-smoke.yml"
+      - "scripts/browser-original-smoke.mjs"
+      - "scripts/browser-original-navigation.mjs"
+      - "scripts/browser-original-audio-probe.mjs"
+      - "scripts/browser-original-touch-probe.mjs"
+      - "scripts/probe-original-clicks.mjs"
+      - "public/port-host.js"
+      - "scripts/stage-original-gamezip.py"
+  workflow_dispatch:
+jobs:
+  chromium-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned browser and Ruffle test dependencies
+        run: |
+          npm install --no-save @ruffle-rs/ruffle@0.7.1 playwright@1.56.1 pngjs@7.0.0
+          npx playwright install --with-deps chromium
+          mkdir -p public/ruffle
+          cp -R node_modules/@ruffle-rs/ruffle/. public/ruffle/
+          test -f public/ruffle/ruffle.js
+      - name: Stage original archive PRIVATELY in ephemeral runner
+        run: |
+          curl -fLsS --retry 1 --max-time 45 --max-filesize 12000000 \
+            "https://download.unstable.life/gib-roms/Games/a8b2e1fb-e408-2f0f-b1b8-08537b0e864b-1747960890788.zip" \
+            -o /tmp/the-house-original.zip
+          python3 scripts/stage-original-gamezip.py /tmp/the-house-original.zip
+          node scripts/check-staged-assets.mjs
+      - name: Start localhost browser research host
+        run: |
+          npm run dev > /tmp/the-house-vite.log 2>&1 &
+          for n in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:5173/port.html > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/the-house-vite.log
+          exit 1
+      - name: Launch authentic Title SWF in Chromium
+        env:
+          CAPTURE_PREVIEWS: '1'
+        run: node scripts/browser-original-smoke.mjs
+      - name: Probe original Dining Room mouse navigation
+        run: node scripts/probe-original-clicks.mjs
+      - name: Exercise authentic Corridor button navigation (exploratory)
+        env:
+          CAPTURE_PREVIEWS: '1'
+        continue-on-error: true
+        run: node scripts/browser-original-navigation.mjs
+      - name: Observe real Ruffle WebAudio initialization and gesture behavior
+        run: node scripts/browser-original-audio-probe.mjs
+      - name: Verify original Corridor room button under simulated mobile touch
+        run: node scripts/browser-original-touch-probe.mjs
+      - name: Provide short-lived original game screenshot previews
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: the-house-original-ruffle-screenshots
+          path: research-screenshots/*.png
+          if-no-files-found: warn
+          retention-days: 3
+      - name: Retain metadata report ONLY
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: original-ruffle-browser-metadata
+          path: |
+            ruffle-smoke-metadata.json
+            original-click-metadata.json
+            ruffle-navigation-metadata.json
+            original-audio-observation.json
+            original-touch-metadata.json
+          if-no-files-found: warn
+          retention-days: 7

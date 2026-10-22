@@ -1,0 +1,141 @@
+import {chromium} from 'playwright';
+import {writeFile,mkdir} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+import {PNG} from 'pngjs';
+
+const browser=await chromium.launch({headless:true,env:{...process.env,LANG:'en_US.UTF-8',LC_ALL:'en_US.UTF-8'},args:['--use-gl=angle','--use-angle=swiftshader']});
+const page=await browser.newPage({viewport:{width:960,height:840},locale:'en-US'});
+const responses=[], errors=[];
+page.on('response',r=>{const p=new URL(r.url()).pathname;if(p.startsWith('/original/'))responses.push({path:p,status:r.status()});});
+page.on('pageerror',e=>errors.push(String(e).slice(0,250)));
+let report={format:'the-house-native-room-click-navigation-v1',from:'Corridor.swf',result:'UNTESTED',clicks:[],responses:[],errors:[],notice:'Observed SWF URL request is evidence of original click behavior, not proof of visually correct transition.'};
+try{
+ await page.goto('http://127.0.0.1:5173/port.html');
+ await page.waitForFunction(()=>Boolean(window.RufflePlayer?.newest),{timeout:20000});
+ await page.locator('#staged').click();
+ await page.locator('#staged-entry').selectOption('/original/Corridor.swf');
+ await page.locator('#load-entry').click();
+ await page.waitForTimeout(3500);
+ const expectedSource=responses.some(x=>x.path==='/original/Corridor.swf'&&x.status===200);
+ if(!expectedSource)throw new Error('Corridor original SWF did not load');
+ const status=await page.locator('#status').innerText();
+ if(process.env.CAPTURE_PREVIEWS==='1') {await mkdir('research-screenshots',{recursive:true});await page.locator('#stage').screenshot({path:'research-screenshots/03-corridor.png'}); }
+ if(/failed|unavailable/i.test(status))throw new Error(status);
+ // Scan the native 600 x 600 stage. We use actual pointer clicks and never
+ // invoke Ruffle internal navigation APIs or synthetic SWF bytecode.
+ const node=page.locator('#stage');
+ const beforeImage=await node.screenshot();
+ const imageHash=bytes=>createHash('sha256').update(bytes).digest('hex');
+ const metadata=()=>page.evaluate(()=>{
+   const movie=document.querySelector('#stage ruffle-player')?.ruffle?.()?.metadata;
+   return movie?{width:movie.width,height:movie.height,numFrames:movie.numFrames,frameRate:movie.frameRate,swfVersion:movie.swfVersion}:null;
+ });
+ const beforeMovie=await metadata();
+ let matching=[];
+ let clicks=0;
+ const wanted=/^\/original\/(?:Bathroom|Kitchen|Living%20room|Dining%20room|Credit)\.swf$/i;
+ // Coordinates derived from ORIGINAL Corridor.swf PlaceObject2 button
+ // translation origins, NOT invented UI hotspots. Hit rectangles still vary.
+ const anchorX=[13.25,144.5,259.65,364.45];
+ const anchorY=585.25;
+ report.probeStrategy='original-button-placement-bottom-edge-then-grid';
+ report.placementOrigins=anchorX.map(x=>[x,anchorY]);
+ for(const sx of anchorX){
+   for(const dx of [6,20,44,75]){
+     for(const dy of [-3,4,10]){
+       const rect=await node.boundingBox();
+       if(!rect)throw new Error('Stage unavailable');
+       const px=Math.round(rect.x+rect.width*(sx+dx)/600);
+       const py=Math.round(rect.y+rect.height*(anchorY+dy)/600);
+       await page.mouse.click(px,py,{delay:35});
+       clicks++;
+       await page.waitForTimeout(140);
+       matching=responses.filter(x=>wanted.test(x.path));
+       if(matching.length){
+         report.firstMatchingClick={strategy:'static-placement-probe',anchorX:sx,offsetX:dx,offsetY:dy,pixelX:px,pixelY:py,request:matching[0]};
+         break;
+       }
+     }
+     if(matching.length)break;
+   }
+   if(matching.length)break;
+ }
+
+ outer:for(let iy=0;iy<12 && !matching.length;iy++){
+   for(let ix=0;ix<12;ix++){
+     const rect=await node.boundingBox();
+     if(!rect)throw new Error('Stage unavailable');
+     const px=Math.round(rect.x+rect.width*(ix+0.5)/12);
+     const py=Math.round(rect.y+rect.height*(iy+0.5)/12);
+     await page.mouse.click(px,py,{delay:40});
+     clicks++;
+     await page.waitForTimeout(125);
+     matching=responses.filter(x=>wanted.test(x.path));
+     if(matching.length){
+       report.firstMatchingClick={x:ix,y:iy,pixelX:px,pixelY:py,request:matching[0]};
+       break outer;
+     }
+     if(page.isClosed())throw new Error('Browser page unexpectedly closed');
+   }
+ }
+ // Record multiple post-transition frames, not just one arbitrary black frame.
+ // No game interaction is injected; original AVM1 _level0 loading does the work.
+ const afterFrames=[];
+ for(const delay of [500,1800,4200]){
+   await page.waitForTimeout(delay);
+   const screenshot=await node.screenshot();
+   const png=PNG.sync.read(screenshot);
+   const colors=new Set();
+   let bright=0, samples=0;
+   for(let i=0;i<png.data.length;i+=16){
+     const r=png.data[i],g=png.data[i+1],b=png.data[i+2];
+     colors.add((r<<16)|(g<<8)|b);samples++;
+     if(Math.max(r,g,b)>35)bright++;
+   }
+   const frame={elapsedWaitMs:afterFrames.reduce((acc,f)=>acc+f.delayMs,0)+delay,
+      delayMs:delay,hash:imageHash(screenshot),uniqueColors:colors.size,
+      brightRatio:Math.round(bright/samples*10000)/10000,movie:await metadata()};
+   afterFrames.push(frame);
+   if(process.env.CAPTURE_PREVIEWS==='1' && matching.some(x=>x.status===200)){
+      await mkdir('research-screenshots',{recursive:true});
+      await writeFile('research-screenshots/04-after-click-'+frame.elapsedWaitMs+'ms.png',screenshot);
+   }
+ }
+ report.afterFrames=afterFrames;
+ const afterImage=await node.screenshot();
+ const afterMovie=await metadata();
+ report.visualEvidence={
+   beforeScreenshotSHA256:imageHash(beforeImage),
+   afterScreenshotSHA256:imageHash(afterImage),
+   changed:imageHash(beforeImage)!==imageHash(afterImage),
+   beforeMovie,afterMovie,
+   distinctPostClickFrames:new Set(afterFrames.map(f=>f.hash)).size,
+   anyNonFlatPostClickFrame:afterFrames.some(f=>f.uniqueColors>30),
+   caution:'Animation may change pixels even without navigation; images are not retained.'
+ };
+ report.result=matching.some(x=>x.status===200)?'ROOM_REQUEST_SUCCEEDED':matching.length?'ROOM_REQUEST_FAILED':'NO_NAVIGATION_OBSERVED';
+ report.clicksAttempted=clicks;
+ report.sourceHttp200=expectedSource;
+ report.responses=responses.slice(-45);
+ report.errors=errors.slice(-15);
+ // No hit in a bounded blind sweep is an inconclusive experiment, not a runtime regression.
+ // Keep infrastructure failures and failed target HTTP requests actionable.
+ // Now that the authentic bottom-edge button has been located, this is a
+ // deterministic original-bytecode navigation regression, no longer a blind
+ // exploratory test. Require the verified button click and SWF HTTP 200.
+ if(report.result!=='ROOM_REQUEST_SUCCEEDED' ||
+    report.firstMatchingClick?.strategy!=='static-placement-probe' ||
+    report.firstMatchingClick?.request?.path!=='/original/Dining%20room.swf'){
+   process.exitCode=1;
+ }
+}catch(e){
+ report.result='TEST_ERROR';
+ report.error=String(e).slice(0,600);
+ report.responses=responses.slice(-30);
+ report.errors=errors.slice(-15);
+ process.exitCode=1;
+}finally{
+ await writeFile('ruffle-navigation-metadata.json',JSON.stringify(report,null,2)+'\n');
+ console.log(JSON.stringify(report,null,2));
+ await browser.close();
+}

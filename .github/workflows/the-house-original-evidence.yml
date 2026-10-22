@@ -1,0 +1,52 @@
+name: The House 2005 GameZIP Evidence
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/the-house-original-evidence.yml"
+      - "scripts/audit-flashpoint-gamezip.py"
+      - "scripts/inspect-archive-original-swf.py"
+      - "scripts/inspect-avm1-navigation.py"
+      - "scripts/inspect-original-button-placements.py"
+      - "scripts/inspect-original-sound-tags.py"
+      - "scripts/stage-original-gamezip.py"
+  workflow_dispatch:
+jobs:
+  inspect-original:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Obtain verified-UUID Flashpoint archive in ephemeral runner
+        run: |
+          curl -fLsS --retry 1 --max-time 45 --max-filesize 12000000 \
+            "https://download.unstable.life/gib-roms/Games/a8b2e1fb-e408-2f0f-b1b8-08537b0e864b-1747960890788.zip" \
+            -o /tmp/the-house-2005-flashpoint.zip
+          python scripts/audit-flashpoint-gamezip.py /tmp/the-house-2005-flashpoint.zip --launch-url 'http://www.sinthaistudio.com/thehouse1/index.html' > original-evidence.json
+          cat original-evidence.json
+          python scripts/inspect-archive-original-swf.py /tmp/the-house-2005-flashpoint.zip > original-swf-references.json
+          cat original-swf-references.json
+          python scripts/inspect-avm1-navigation.py /tmp/the-house-2005-flashpoint.zip > avm1-navigation.json
+          cat avm1-navigation.json
+          python scripts/inspect-original-button-placements.py /tmp/the-house-2005-flashpoint.zip > button-origins.json
+          cat button-origins.json
+          python scripts/inspect-original-sound-tags.py /tmp/the-house-2005-flashpoint.zip > original-sound-tags.json
+          cat original-sound-tags.json
+          python scripts/stage-original-gamezip.py /tmp/the-house-2005-flashpoint.zip --dest /tmp/the-house-original-stage
+          python -c 'import json; from pathlib import Path; p=Path("/tmp/the-house-original-stage"); m=json.loads((p/"port-manifest.json").read_text()); i=json.loads((p/"inventory.json").read_text()); assert m["entry"]=="/original/Title.swf"; assert len(i["files"])>=7; assert all((p/f["path"]).exists() for f in i["files"]); print("Verified original staging, entrypoint and",len(i["files"]),"local files")'
+      - name: Save metadata and hashes ONLY
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: the-house-original-file-metadata
+          path: |
+            original-evidence.json
+            original-swf-references.json
+            avm1-navigation.json
+            button-origins.json
+            original-sound-tags.json
+          retention-days: 7

@@ -36,3 +36,9 @@ See [research checklist](docs/research.md) and [iPhone Safari acceptance checkli
 ## Rights
 
 Repository-authored code is MIT licensed. Original The House game assets, scripts, sound, story, and trademark are not licensed by this repository's MIT license. Obtain permission before redistribution.
+
+## Genuine Flash port track (separate from experimental demo)
+
+The real-game execution host is available at **`/port.html`** after starting Vite. It loads an original SWF through Ruffle rather than reconstructing scenes. The host ships **without any original game data or bundled Ruffle executable**; see [instructions](docs/original-port-host.md).
+
+The two-room prototype at `/` is a separate original engineering fixture and must not be mistaken for a completed port.
