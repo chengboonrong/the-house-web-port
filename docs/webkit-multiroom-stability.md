@@ -62,3 +62,11 @@ artwork. It is *not* evidence of puzzle progress, a jumpscare or correct audio.
 No speculative hotspot is tapped or game state injected. A deterministic puzzle
 regression still requires verified AVM1 action provenance, timeline visibility,
 and a reproducible authentic input sequence.
+
+## Dining Room puzzle by touch (2026-10-22)
+
+After the endurance samples, the chain test now completes the original Dining
+Room puzzle. It taps the route the inspector derived from sprite 91, and the run is
+checked by button 90's `Bathroom.swf` request, with a before-route control tap.
+This needed two host fixes: `forceScale` against the room's noScale crop, and a touch hover
+adapter for Ruffle's AVM1 rollOver. Details: `verified-dining-room-puzzle.md`.

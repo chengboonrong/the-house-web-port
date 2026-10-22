@@ -20,3 +20,10 @@ The original file has a verified DefineButton2 button ID 90 whose AVM1 GetURL ac
 ## Next evidence requirement
 
 Trace original button 90 placement through PlaceObject2 and its sprite timeline, identify the actual hotspot/trigger frame, and drive a controlled interaction sequence. Log stages separately: resource request, HTTP success, metadata changes, displayed pixels. Do not publish original assets or screenshots.
+
+## Explained 2026-10-22
+
+Two causes, both now verified. Button 90 exists only on sprite 91's final stop
+frame (461), reached by a 17-tap original button chain. Also, `Dining room.swf`
+sets `Stage.scaleMode = "noScale"`, which made grid points map to the wrong
+stage coordinates. See `verified-dining-room-puzzle.md`.
